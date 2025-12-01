@@ -3,6 +3,8 @@ export const GAMEPLAY_CONFIG = {
   player: {
     moveSpeed: 8,
     sprintMultiplier: 1.6,
+    crouchSpeedMultiplier: 0.5, // crouch movement speed is 50% of normal
+    crouchHeightOffset: 0.5, // percentage of player height when crouching
     jumpStrength: 8,
     gravity: 18,
     coyoteTime: 0.1,

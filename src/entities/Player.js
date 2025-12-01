@@ -17,7 +17,10 @@ export default class Player {
     this.velocity = new Vector3();
     this.heading = new Euler(0, 0, 0, "YXZ");
 
-    this.height = 1.6;
+    this.standingHeight = 1.6;
+    this.crouchHeight = this.standingHeight - 0.5;
+    this.currentHeight = this.standingHeight;
+    this.height = this.standingHeight; // legacy ground check uses this.height
     this.sensitivity = 0.0025;
     this.onGround = true;
     this.coyoteTimer = 0;
@@ -31,10 +34,11 @@ export default class Player {
     if (spawn) {
       this.camera.position.copy(spawn);
     } else {
-      this.camera.position.set(0, this.height, 8);
+      this.camera.position.set(0, this.standingHeight, 8);
     }
     this.velocity.set(0, 0, 0);
     this.heading.set(0, 0, 0, "YXZ");
+    this.currentHeight = this.standingHeight;
   }
 
   handleResize(width, height) {
@@ -47,6 +51,7 @@ export default class Player {
     const cfg = this.world.gameplayConfig.player;
     const wasOnGround = this.onGround;
     let jumpedThisFrame = false;
+    const crouching = this.input.isCrouching();
 
     // Buffer jump input so it can fire when conditions allow
     if (this.input.consumeJump()) {
@@ -74,7 +79,10 @@ export default class Player {
 
     const moveAxis = this.input.getMoveAxis();
     const sprint = this.input.isSprinting();
-    const speed = cfg.moveSpeed * (sprint ? cfg.sprintMultiplier : 1);
+    const speed =
+      cfg.moveSpeed *
+      (sprint ? cfg.sprintMultiplier : 1) *
+      (crouching ? cfg.crouchSpeedMultiplier : 1);
     const moving = moveAxis.lengthSq() > 0.01;
 
     dir.add(forward.multiplyScalar(moveAxis.y));
@@ -108,10 +116,14 @@ export default class Player {
     this.camera.position.add(dir);
     this.camera.position.y += this.velocity.y * dt;
 
+    // Smooth crouch height adjustment
+    const targetHeight = crouching ? this.crouchHeight : this.standingHeight;
+    this.currentHeight = MathUtils.lerp(this.currentHeight, targetHeight, Math.min(10 * dt, 1));
+
     // Ground collision at y = player height
-    if (this.camera.position.y < this.height) {
+    if (this.camera.position.y < this.currentHeight) {
       const landing = !wasOnGround;
-      this.camera.position.y = this.height;
+      this.camera.position.y = this.currentHeight;
       this.velocity.y = 0;
       this.onGround = true;
       // If we buffered jump during air and are landing within the buffer window, jump immediately
@@ -128,7 +140,8 @@ export default class Player {
     this.stateMachine.update(dt, {
       player: this,
       moving,
-      onGround: this.onGround
+      onGround: this.onGround,
+      crouching
     });
   }
 
@@ -153,7 +166,16 @@ export default class Player {
       })
       .addState("air", {
         onUpdate: (dt, ctx) => {
-          if (ctx.onGround) this.stateMachine.setState(ctx.moving ? "move" : "idle");
+          if (ctx.onGround) {
+            if (ctx.crouching) this.stateMachine.setState("crouch");
+            else this.stateMachine.setState(ctx.moving ? "move" : "idle");
+          }
+        }
+      })
+      .addState("crouch", {
+        onUpdate: (dt, ctx) => {
+          if (!ctx.onGround) this.stateMachine.setState("air");
+          else if (!ctx.crouching) this.stateMachine.setState(ctx.moving ? "move" : "idle");
         }
       });
     this.stateMachine.setState("idle");
