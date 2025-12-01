@@ -6,7 +6,10 @@ import InputManager from "../systems/InputManager.js";
 import UIManager from "../systems/UIManager.js";
 import ModeManager from "../systems/ModeManager.js";
 import WaveManager from "../systems/WaveManager.js";
-import { MODE_CONFIGS } from "../config/modes.js";
+import WeaponState from "../systems/WeaponState.js";
+import { MODE_CONFIGS } from "../config/ModeConfig.js";
+import { sceneForMode } from "../config/SceneConfig.js";
+import { createProfileForMode } from "../render/RenderProfiles.js";
 
 export default class Game {
   constructor({ canvas, gameplayConfig }) {
@@ -29,6 +32,7 @@ export default class Game {
     this.world.setInputManager(this.input);
 
     this.waveManager = new WaveManager(this.world, gameplayConfig);
+    this.weaponState = null;
 
     this.clock = new Clock();
     this.raycaster = new Raycaster();
@@ -39,7 +43,6 @@ export default class Game {
       hits: 0,
       shots: 0
     };
-    this.lastShotTime = 0;
     this.autoPlay = false;
 
     this._bindUI();
@@ -76,9 +79,16 @@ export default class Game {
     const cfg = MODE_CONFIGS[mode];
     if (!cfg) return;
     this.modeManager.setMode(mode);
+    const profile = createProfileForMode(mode, this.assetManager);
+    this.world.setRenderProfile(profile);
+    const sceneConfig = sceneForMode(mode);
+    this.weaponState = new WeaponState(cfg.weapon);
     await this.world.preload(cfg);
     await this.world.setupEnvironment(cfg);
-    this.world.reset(cfg);
+    this.world.buildScene(sceneConfig);
+    this.world.reset(cfg, sceneConfig);
+    this.waveManager.setSpawnPoints(this.world.spawnPoints);
+    this.waveManager.setSceneConfig(sceneConfig);
   }
 
   async start(auto) {
@@ -95,7 +105,7 @@ export default class Game {
     this.state.setState("playing");
     this.ui.showHUD();
     // Try to capture pointer as the user just clicked a button.
-    this.canvas.requestPointerLock?.();
+    await this.canvas.requestPointerLock?.();
     this.clock.start();
   }
 
@@ -112,12 +122,13 @@ export default class Game {
 
   handleShooting(dt) {
     const weapon = this.modeManager.currentConfig().weapon;
-    const fireInterval = 1 / weapon.fireRate;
-    this.lastShotTime += dt;
     const wantsFire = this.autoPlay || this.input.isFiring();
     if (!wantsFire) return;
-    if (this.lastShotTime < fireInterval) return;
-    this.lastShotTime = 0;
+    if (this.input.consumeReload() && this.weaponState) {
+      this.weaponState.startReload();
+      return;
+    }
+    if (this.weaponState && !this.weaponState.tryFire()) return;
     this.accumulators.shots += 1;
 
     // Cast a ray from camera center
@@ -149,6 +160,7 @@ export default class Game {
         this.finishSession();
       }
       if (this.autoPlay) this.driveAuto(dt);
+      if (this.weaponState) this.weaponState.update(dt);
       this.handleShooting(dt);
       this.waveManager.update(dt);
       this.world.update(dt);

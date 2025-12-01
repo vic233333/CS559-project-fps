@@ -4,10 +4,20 @@ export default class WaveManager {
   constructor(world, gameplayConfig) {
     this.world = world;
     this.config = gameplayConfig;
+    this.spawnPoints = [];
+    this.sceneConfig = null;
     this.waveIndex = 0;
     this.elapsed = 0;
     this.activeTargets = [];
     this.onWave = () => {};
+  }
+
+  setSpawnPoints(points) {
+    this.spawnPoints = points || [];
+  }
+
+  setSceneConfig(cfg) {
+    this.sceneConfig = cfg;
   }
 
   async start() {
@@ -24,15 +34,15 @@ export default class WaveManager {
     const moveCount = Math.floor(wave.targets * wave.movingRatio);
     for (let i = 0; i < wave.targets; i++) {
       const moving = i < moveCount;
-      const angle = (i / wave.targets) * Math.PI * 2;
-      const radius = this.config.target.moveRadius;
-      const x = Math.cos(angle) * radius;
-      const z = Math.sin(angle) * radius;
+      const spawn =
+        this.spawnPoints.length > 0
+          ? this.spawnPoints[i % this.spawnPoints.length].position
+          : this._fallbackSpawn(i, wave.targets);
       const target = await this.world.spawnTarget({
         moving,
         speed: wave.speed,
         radius: this.config.target.radius,
-        position: new Vector3(x, this.config.playerHeight || 1.2, z)
+        position: spawn.clone()
       });
       this.activeTargets.push(target);
     }
@@ -59,5 +69,13 @@ export default class WaveManager {
     }
 
     // TODO: Spawn tougher enemy types or add projectiles in later waves to satisfy automation/AI goals.
+  }
+
+  _fallbackSpawn(i, total) {
+    const angle = (i / total) * Math.PI * 2;
+    const radius = this.config.target.moveRadius;
+    const x = Math.cos(angle) * radius;
+    const z = Math.sin(angle) * radius;
+    return new Vector3(x, this.config.playerHeight || 1.2, z);
   }
 }

@@ -1,72 +1,80 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CS559 FPS Range</title>
-    <link rel="stylesheet" href="/src/style.css" />
-  </head>
-  <body>
-    <header class="top-banner">
-      <div class="title">CS559 FPS Range</div>
-      <div class="meta">
-        <!-- TODO: Replace identity placeholders below with your real info for grading. -->
-        <span>NetID: yourid</span>
-        <span>Group: YourGroupName</span>
-        <span>Group ID: 0000</span>
-      </div>
-      <div class="mode-switch">
-        <button data-mode="prototype" class="mode-btn active">Prototype</button>
-        <button data-mode="full" class="mode-btn">Full</button>
-      </div>
-    </header>
 
-    <main>
-      <div id="canvas-container">
-        <canvas id="game-canvas"></canvas>
-      </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CS559 FPS Range</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
 
-      <section id="ui-layer">
-        <div id="menu-screen" class="panel visible">
-          <h1>FPS Training Grounds</h1>
-          <p class="desc">
-            Desktop only — WASD to move, mouse to aim, left click to shoot.
-          </p>
-          <div class="options">
-            <button id="start-btn">Start Session</button>
-            <button id="auto-btn">Auto Play Demo</button>
-          </div>
-          <div class="legend">
-            <p><strong>Controls</strong></p>
-            <p>Move: WASD · Sprint: Shift · Jump: Space</p>
-            <p>Pause: Esc · Toggle Mode: buttons above</p>
-          </div>
+<body>
+  <header class="top-banner">
+    <div class="title">CS559 FPS Range</div>
+    <div class="meta">
+      <span>Member: Xinchen Shen</span>
+      <span>NetID: xshen259</span>
+    </div>
+    <div class="mode-switch">
+      <button data-mode="prototype" class="mode-btn active">Prototype</button>
+      <button data-mode="full" class="mode-btn">Full</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="canvas-container">
+      <canvas id="game-canvas"></canvas>
+    </div>
+
+    <section id="overlay-layer">
+      <div id="menu-screen" class="panel visible">
+        <h1>FPS Training Grounds</h1>
+        <p class="desc">
+          Welcome to the FPS Training Grounds! Hone your shooting skills in this immersive first-person
+          experience. Test your accuracy, speed, and reflexes as you face waves of targets.<br>
+          Good luck, and have fun!
+        </p>
+        <div class="legend">
+          <p><strong>Controls</strong></p>
+          <p>Move: WASD · Sprint: Shift · Jump: Space</p>
+          <p>Pause: Esc · Toggle Mode: buttons above</p>
         </div>
-
-        <div id="hud" class="panel">
-          <div class="hud-row">
-            <span id="hud-score">Score: 0</span>
-            <span id="hud-time">Time: 60</span>
-            <span id="hud-wave">Wave: 1</span>
-            <span id="hud-health">HP: 100</span>
-          </div>
+        <div class="options">
+          <button id="start-btn">Start Session</button>
+          <button id="auto-btn">Auto Play Demo</button>
         </div>
+      </div>
 
-        <div id="end-screen" class="panel">
-          <h2>Session Complete</h2>
-          <div class="summary">
-            <p id="final-score">Score: 0</p>
-            <p id="final-wave">Wave Reached: 1</p>
-            <p id="final-accuracy">Accuracy: 0%</p>
-          </div>
-          <div class="options">
-            <button id="restart-btn">Restart</button>
-            <button id="menu-btn">Back to Menu</button>
-          </div>
+      <div id="end-screen" class="panel">
+        <h2>Session Complete</h2>
+        <div class="summary">
+          <p id="final-score">Score: 0</p>
+          <p id="final-wave">Wave Reached: 1</p>
+          <p id="final-accuracy">Accuracy: 0%</p>
         </div>
-      </section>
-    </main>
+        <div class="options">
+          <button id="restart-btn">Restart</button>
+          <button id="menu-btn">Back to Menu</button>
+        </div>
+      </div>
+    </section>
 
-    <script type="module" src="/src/main.js"></script>
-  </body>
+    <section id="ui-layer">
+      <div id="hud" class="hud">
+        <div class="hud-row">
+          <span id="hud-score">Score: 0</span>
+          <span id="hud-time">Time: 60</span>
+          <span id="hud-wave">Wave: 1</span>
+          <span id="hud-health">HP: 100</span>
+        </div>
+      </div>
+    </section>
+
+
+
+  </main>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+
 </html>

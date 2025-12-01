@@ -1,4 +1,4 @@
-import { MODE_CONFIGS, MODE_NAMES, detectModeFromURL } from "../config/modes.js";
+import { MODE_CONFIGS, MODE_NAMES, detectModeFromURL } from "../config/ModeConfig.js";
 
 export default class ModeManager {
   constructor() {

@@ -1,4 +1,5 @@
 import { PerspectiveCamera, Vector3, Euler, MathUtils } from "three";
+import StateMachine from "../systems/StateMachine.js";
 
 export default class Player {
   constructor({ modeManager, input, world }) {
@@ -19,10 +20,17 @@ export default class Player {
     this.height = 1.6;
     this.sensitivity = 0.0025;
     this.onGround = true;
+
+    this.stateMachine = new StateMachine("idle");
+    this._setupStates();
   }
 
-  reset() {
-    this.camera.position.set(0, this.height, 8);
+  reset(spawn) {
+    if (spawn) {
+      this.camera.position.copy(spawn);
+    } else {
+      this.camera.position.set(0, this.height, 8);
+    }
     this.velocity.set(0, 0, 0);
     this.heading.set(0, 0, 0, "YXZ");
   }
@@ -36,7 +44,7 @@ export default class Player {
     if (!this.input) return;
 
     // Look
-    const look = this.input.consumeMouseDelta();
+    const look = this.input.consumeLookDelta();
     this.heading.y -= look.x * this.sensitivity;
     this.heading.x -= look.y * this.sensitivity;
     this.heading.x = MathUtils.clamp(this.heading.x, -Math.PI / 2 + 0.05, Math.PI / 2 - 0.05);
@@ -52,13 +60,12 @@ export default class Player {
     forward.normalize();
     right.normalize();
 
-    const sprint = this.input.isKeyDown("ShiftLeft") || this.input.isKeyDown("ShiftRight");
+    const moveAxis = this.input.getMoveAxis();
+    const sprint = this.input.isSprinting();
     const speed = cfg.moveSpeed * (sprint ? cfg.sprintMultiplier : 1);
 
-    if (this.input.isKeyDown("KeyW")) dir.add(forward);
-    if (this.input.isKeyDown("KeyS")) dir.sub(forward);
-    if (this.input.isKeyDown("KeyA")) dir.sub(right);
-    if (this.input.isKeyDown("KeyD")) dir.add(right);
+    dir.add(forward.multiplyScalar(moveAxis.y));
+    dir.add(right.multiplyScalar(moveAxis.x));
 
     if (dir.lengthSq() > 0) dir.normalize().multiplyScalar(speed * dt);
 
@@ -66,6 +73,7 @@ export default class Player {
     if (this.onGround && this.input.consumeJump()) {
       this.velocity.y = cfg.jumpStrength;
       this.onGround = false;
+      this.stateMachine.setState("jump");
     }
     this.velocity.y -= cfg.gravity * dt;
 
@@ -79,5 +87,38 @@ export default class Player {
       this.velocity.y = 0;
       this.onGround = true;
     }
+
+    this.stateMachine.update(dt, {
+      player: this,
+      moving: moveAxis.lengthSq() > 0.01,
+      onGround: this.onGround
+    });
+  }
+
+  _setupStates() {
+    this.stateMachine
+      .addState("idle", {
+        onUpdate: (dt, ctx) => {
+          if (!ctx.onGround) this.stateMachine.setState("air");
+          else if (ctx.moving) this.stateMachine.setState("move");
+        }
+      })
+      .addState("move", {
+        onUpdate: (dt, ctx) => {
+          if (!ctx.onGround) this.stateMachine.setState("air");
+          else if (!ctx.moving) this.stateMachine.setState("idle");
+        }
+      })
+      .addState("jump", {
+        onUpdate: (dt, ctx) => {
+          if (!ctx.onGround) this.stateMachine.setState("air");
+        }
+      })
+      .addState("air", {
+        onUpdate: (dt, ctx) => {
+          if (ctx.onGround) this.stateMachine.setState(ctx.moving ? "move" : "idle");
+        }
+      });
+    this.stateMachine.setState("idle");
   }
 }

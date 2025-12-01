@@ -6,6 +6,7 @@
   --text: #e6edf3;
   --muted: #9aa5b1;
   --danger: #ff4d6d;
+  --banner-height: 52px;
   font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
@@ -89,7 +90,7 @@ main {
   background: #0a0f1c;
 }
 
-#ui-layer {
+#overlay-layer {
   position: fixed;
   inset: 0;
   pointer-events: none;
@@ -160,26 +161,42 @@ button:hover {
   font-size: 14px;
 }
 
-#hud {
-  position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: none;
-  min-width: 60%;
+#ui-layer {
+  position: fixed;
+  top: calc(var(--banner-height) + 8px);
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 9;
 }
 
-#hud .hud-row {
-  display: flex;
-  justify-content: space-between;
-  background: rgba(0, 0, 0, 0.35);
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+#hud {
+  display: none;
+  pointer-events: auto;
 }
 
 #hud.visible {
   display: block;
+}
+
+#hud .hud-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+#hud .hud-row span {
+  min-width: 80px;
+  text-align: center;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
 .summary p {
@@ -192,10 +209,31 @@ button:hover {
     align-items: flex-start;
     gap: 6px;
   }
+
   .mode-switch {
     width: 100%;
   }
+
   .mode-btn {
     flex: 1;
+  }
+
+  #ui-layer {
+    justify-content: flex-end;
+    padding-right: 16px;
+  }
+
+  #hud {
+    margin: 0;
+  }
+
+  #hud .hud-row {
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  #hud .hud-row span {
+    min-width: auto;
+    text-align: right;
   }
 }

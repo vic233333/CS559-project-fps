@@ -1,12 +1,6 @@
 import {
   Scene,
   Color,
-  FogExp2,
-  PlaneGeometry,
-  MeshStandardMaterial,
-  Mesh,
-  HemisphereLight,
-  DirectionalLight,
   Vector3,
   Group,
   WebGLRenderer,
@@ -14,6 +8,7 @@ import {
 } from "three";
 import Player from "../entities/Player.js";
 import Target from "../entities/Target.js";
+import SceneBuilder from "../systems/SceneBuilder.js";
 
 export default class World {
   constructor({ canvas, modeManager, assetManager, gameplayConfig }) {
@@ -21,6 +16,7 @@ export default class World {
     this.modeManager = modeManager;
     this.assetManager = assetManager;
     this.gameplayConfig = gameplayConfig;
+    this.renderProfile = null;
 
     this.scene = new Scene();
     this.renderer = new WebGLRenderer({
@@ -38,6 +34,8 @@ export default class World {
     this.ground = null;
     this.targetGroup = new Group();
     this.scene.add(this.targetGroup);
+    this.sceneBuilder = new SceneBuilder(this.scene);
+    this.spawnPoints = [];
 
     this.player = new Player({
       modeManager,
@@ -52,58 +50,16 @@ export default class World {
     this.player.input = input;
   }
 
-  async setupEnvironment(modeConfig) {
-    this.scene.background = new Color(modeConfig.skyColor);
-    this.scene.fog = new FogExp2(modeConfig.fog.color, modeConfig.fog.density);
-
-    // Remove old ground/lights
-    if (this.ground) {
-      this.scene.remove(this.ground);
-      this.ground.geometry.dispose();
-      this.ground.material.dispose();
-    }
-    for (const light of this.lights) this.scene.remove(light);
-    this.lights = [];
-
-    // Ground
-    const groundGeo = new PlaneGeometry(200, 200);
-    const groundMat = new MeshStandardMaterial({
-      color: modeConfig.groundColor,
-      roughness: 0.9,
-      metalness: 0.05
-    });
-    this.ground = new Mesh(groundGeo, groundMat);
-    this.ground.rotation.x = -Math.PI / 2;
-    this.ground.receiveShadow = true;
-    this.scene.add(this.ground);
-
-    // Lights
-    const hemi = new HemisphereLight("#88aaff", "#080910", modeConfig.ambientIntensity);
-    const dir = new DirectionalLight("#ffffff", modeConfig.directionalIntensity);
-    dir.position.set(8, 15, 6);
-    dir.castShadow = true;
-    dir.shadow.mapSize.set(1024, 1024);
-    dir.shadow.camera.near = 1;
-    dir.shadow.camera.far = 50;
-    this.scene.add(hemi);
-    this.scene.add(dir);
-    this.lights.push(hemi, dir);
-
-    // HDR environment if requested
-    if (modeConfig.useHDR && modeConfig.hdrUrl) {
-      try {
-        const envMap = await this.assetManager.loadHDR(modeConfig.hdrUrl);
-        this.scene.environment = envMap;
-      } catch (err) {
-        console.warn("HDR load failed, falling back to no environment", err);
-        this.scene.environment = null;
-      }
-    } else {
-      this.scene.environment = null;
-    }
+  setRenderProfile(profile) {
+    this.renderProfile = profile;
   }
 
-  reset(modeConfig) {
+  async setupEnvironment(modeConfig) {
+    if (!this.renderProfile) throw new Error("Render profile not set");
+    await this.renderProfile.applyEnvironment(this, modeConfig);
+  }
+
+  reset(modeConfig, sceneConfig) {
     // Remove existing targets/entities
     for (const t of this.targets) t.destroy(this.scene);
     this.targets = [];
@@ -111,7 +67,10 @@ export default class World {
     this.targetGroup.clear();
 
     // Reset player position
-    this.player.reset();
+    const spawn = sceneConfig?.playerSpawn
+      ? new Vector3(...sceneConfig.playerSpawn)
+      : new Vector3(0, this.player.height, 8);
+    this.player.reset(spawn);
 
     // Configure render clear color to match sky
     this.renderer.setClearColor(new Color(modeConfig.skyColor), 1);
@@ -130,7 +89,7 @@ export default class World {
     const modeConfig = this.modeManager.currentConfig();
     const target = new Target({
       modeConfig,
-      assetManager: this.assetManager,
+      renderProfile: this.renderProfile,
       moving,
       speed,
       radius,
@@ -160,5 +119,11 @@ export default class World {
     const height = window.innerHeight;
     this.renderer.setSize(width, height);
     this.player.handleResize(width, height);
+  }
+
+  buildScene(sceneConfig) {
+    this.sceneBuilder.build(sceneConfig);
+    this.spawnPoints = this.sceneBuilder.spawnPoints;
+    this.currentSceneConfig = sceneConfig;
   }
 }
