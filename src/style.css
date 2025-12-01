@@ -94,10 +94,12 @@ main {
   position: fixed;
   inset: 0;
   pointer-events: none;
+  z-index: 1;
 }
 
 .panel {
   pointer-events: auto;
+  z-index: 2;
 }
 
 #menu-screen,
@@ -175,6 +177,7 @@ button:hover {
 #hud {
   display: none;
   pointer-events: auto;
+  z-index: 3;
 }
 
 #hud.visible {
@@ -201,6 +204,41 @@ button:hover {
 
 .summary p {
   margin-bottom: 4px;
+}
+
+#crosshair {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 0; /* stays beneath panels/HUD */
+}
+
+#crosshair::before,
+#crosshair::after {
+  content: "";
+  position: absolute;
+  background: #3dff7a;
+  /* box-shadow: 0 0 6px rgba(61, 255, 122, 0.6); */
+}
+
+#crosshair::before {
+  width: 100%;
+  height: 1px;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+}
+
+#crosshair::after {
+  height: 100%;
+  width: 1px;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
 }
 
 @media (max-width: 900px) {
