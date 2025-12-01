@@ -5,6 +5,8 @@ export const GAMEPLAY_CONFIG = {
     sprintMultiplier: 1.6,
     jumpStrength: 8,
     gravity: 18,
+    coyoteTime: 0.1,
+    jumpBufferTime: 0.1,
     health: 100
   },
   waves: [

@@ -20,6 +20,8 @@ export default class Player {
     this.height = 1.6;
     this.sensitivity = 0.0025;
     this.onGround = true;
+    this.coyoteTimer = 0;
+    this.jumpBufferTimer = 0;
 
     this.stateMachine = new StateMachine("idle");
     this._setupStates();
@@ -42,6 +44,17 @@ export default class Player {
 
   update(dt) {
     if (!this.input) return;
+    const cfg = this.world.gameplayConfig.player;
+    const wasOnGround = this.onGround;
+    let jumpedThisFrame = false;
+
+    // Buffer jump input so it can fire when conditions allow
+    if (this.input.consumeJump()) {
+      this.jumpBufferTimer = cfg.jumpBufferTime;
+    }
+    if (this.jumpBufferTimer > 0) {
+      this.jumpBufferTimer = Math.max(0, this.jumpBufferTimer - dt);
+    }
 
     // Look
     const look = this.input.consumeLookDelta();
@@ -51,7 +64,6 @@ export default class Player {
     this.camera.quaternion.setFromEuler(this.heading);
 
     // Move
-    const cfg = this.world.gameplayConfig.player;
     const dir = new Vector3();
     const forward = new Vector3(0, 0, -1).applyEuler(this.heading);
     const right = new Vector3(1, 0, 0).applyEuler(this.heading);
@@ -63,18 +75,33 @@ export default class Player {
     const moveAxis = this.input.getMoveAxis();
     const sprint = this.input.isSprinting();
     const speed = cfg.moveSpeed * (sprint ? cfg.sprintMultiplier : 1);
+    const moving = moveAxis.lengthSq() > 0.01;
 
     dir.add(forward.multiplyScalar(moveAxis.y));
     dir.add(right.multiplyScalar(moveAxis.x));
 
     if (dir.lengthSq() > 0) dir.normalize().multiplyScalar(speed * dt);
 
-    // Jump and gravity
-    if (this.onGround && this.input.consumeJump()) {
+    // Update coyote timer based on ground contact
+    if (this.onGround) {
+      this.coyoteTimer = cfg.coyoteTime;
+    } else if (this.coyoteTimer > 0) {
+      this.coyoteTimer = Math.max(0, this.coyoteTimer - dt);
+    }
+
+    const wantsJump = this.jumpBufferTimer > 0;
+    const canJump = this.onGround || this.coyoteTimer > 0;
+
+    if (wantsJump && canJump) {
       this.velocity.y = cfg.jumpStrength;
       this.onGround = false;
+      this.coyoteTimer = 0;
+      this.jumpBufferTimer = 0;
+      jumpedThisFrame = true;
       this.stateMachine.setState("jump");
     }
+
+    // Gravity
     this.velocity.y -= cfg.gravity * dt;
 
     // Integrate motion
@@ -83,14 +110,24 @@ export default class Player {
 
     // Ground collision at y = player height
     if (this.camera.position.y < this.height) {
+      const landing = !wasOnGround;
       this.camera.position.y = this.height;
       this.velocity.y = 0;
       this.onGround = true;
+      // If we buffered jump during air and are landing within the buffer window, jump immediately
+      if (!jumpedThisFrame && this.jumpBufferTimer > 0) {
+        this.velocity.y = cfg.jumpStrength;
+        this.onGround = false;
+        this.coyoteTimer = 0;
+        this.jumpBufferTimer = 0;
+        jumpedThisFrame = true;
+        this.stateMachine.setState("jump");
+      }
     }
 
     this.stateMachine.update(dt, {
       player: this,
-      moving: moveAxis.lengthSq() > 0.01,
+      moving,
       onGround: this.onGround
     });
   }
