@@ -212,9 +212,9 @@ export default class Game {
     let best = null;
     let bestDist = Infinity;
     for (const target of this.world.targets) {
-      if (!target?.alive || !target.object3D) continue;
-      target.object3D.updateWorldMatrix(true, false);
-      target.object3D.getWorldPosition(_targetPos);
+      // Use hitbox for targeting since that's what the raycaster actually hits
+      if (!target?.alive || !target.hitbox) continue;
+      target.hitbox.getWorldPosition(_targetPos);
       const distanceSq = _cameraPos.distanceToSquared(_targetPos);
       if (distanceSq < bestDist) {
         bestDist = distanceSq;
@@ -226,9 +226,9 @@ export default class Game {
 
   _aimAtTarget(target) {
     const player = this.world.player;
-    if (!player?.camera || !target?.object3D) return;
-    target.object3D.updateWorldMatrix(true, false);
-    target.object3D.getWorldPosition(_targetPos);
+    // Use hitbox for aiming since that's what the raycaster actually hits
+    if (!player?.camera || !target?.hitbox) return;
+    target.hitbox.getWorldPosition(_targetPos);
     player.camera.getWorldPosition(_cameraPos);
     _vectorToTarget.copy(_targetPos).sub(_cameraPos);
     if (_vectorToTarget.lengthSq() === 0) return;
