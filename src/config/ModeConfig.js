@@ -1,6 +1,5 @@
 export const MODE_NAMES = {
-  PROTOTYPE: "prototype",
-  FULL: "full"
+  PROTOTYPE: "prototype"
 };
 
 export const MODE_CONFIGS = {
@@ -22,41 +21,9 @@ export const MODE_CONFIGS = {
     },
     geometryStyle: "primitive", // boxes/spheres
     postprocessing: false
-  },
-  [MODE_NAMES.FULL]: {
-    label: "Full",
-    skyColor: "#0a0c12",
-    groundColor: "#121825",
-    useHDR: true,
-    hdrUrl: "/assets/hdr/studio_small_03_1k.hdr",
-    ambientIntensity: 0.7,
-    directionalIntensity: 1.5,
-    fog: { color: "#0a0c12", density: 0.01 },
-    targetPalette: ["#6dd3ff", "#ffc857", "#ff6f61", "#c792ea"],
-    weapon: {
-      fireRate: 8,
-      spread: 0.006,
-      damage: 30,
-      muzzleFlash: true,
-      recoil: 0.006
-    },
-    geometryStyle: "hybrid", // mix glTF + primitives
-    postprocessing: true,
-    gltfTargets: [
-      { url: "/assets/models/target_drone.glb", scale: 1.1 },
-      { url: "/assets/models/target_sphere.glb", scale: 0.9 }
-    ],
-    environmentFX: {
-      enableBloom: true,
-      enableChromaticAberration: false
-    }
-    // TODO: Add post-processing pipeline to actually use environmentFX flags (bloom, CA, etc.).
   }
 };
 
 export function detectModeFromURL() {
-  const params = new URLSearchParams(window.location.search);
-  const param = params.get("mode");
-  if (param && MODE_CONFIGS[param]) return param;
   return MODE_NAMES.PROTOTYPE;
 }

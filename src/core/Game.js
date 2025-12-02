@@ -53,7 +53,6 @@ export default class Game {
     this.autoTarget = null;
 
     this._bindUI();
-    this._bindModeSwitch();
     this.loop = this.loop.bind(this);
     this.state.on("change", ({ next }) => this.onStateChange(next));
   }
@@ -71,16 +70,6 @@ export default class Game {
     document.getElementById("menu-btn").addEventListener("click", () => this.toMenu());
   }
 
-  _bindModeSwitch() {
-    const buttons = document.querySelectorAll(".mode-btn");
-    buttons.forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const mode = btn.dataset.mode;
-        await this.applyMode(mode);
-        buttons.forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
-      });
-    });
-  }
 
   async applyMode(mode) {
     const cfg = MODE_CONFIGS[mode];
