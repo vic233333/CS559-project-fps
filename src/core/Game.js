@@ -171,6 +171,11 @@ export default class Game {
       } else {
         this.accumulators.score += 25;
       }
+
+      // In autoplay mode, switch to a new target after each hit for better demo behavior
+      if (this.autoPlay) {
+        this.autoTarget = null;
+      }
     }
   }
 
