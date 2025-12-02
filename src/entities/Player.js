@@ -9,7 +9,9 @@ export default class Player {
     this.input = input;
     this.world = world;
 
-    this.camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 200);
+    // Far plane set very high so picking rays can reach distant targets
+    this.camera = new PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
+    this.camera.updateProjectionMatrix();
     this.camera.position.set(0, 1.6, 8);
     this.heading = new Euler(0, 0, 0, "YXZ");
 

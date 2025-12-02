@@ -36,6 +36,8 @@ export default class Game {
 
     this.clock = new Clock();
     this.raycaster = new Raycaster();
+    this.raycaster.near = 0.01;
+    this.raycaster.far = Number.POSITIVE_INFINITY; // effectively infinite ray length for hitscan
     this.center = new Vector2(0, 0);
     this.accumulators = {
       timeLeft: gameplayConfig.sessionLength,
@@ -132,21 +134,36 @@ export default class Game {
     this.accumulators.shots += 1;
 
     // Cast a ray from camera center
+    // Make sure scene graph world matrices are up-to-date before raycast;
+    // when we shoot earlier than the render pass, transforms may still be stale.
+    this.world.scene.updateMatrixWorld(true);
+    this.world.player.camera.updateMatrixWorld(true);
+
     this.raycaster.setFromCamera(this.center, this.world.player.camera);
-    const hits = this.raycaster.intersectObjects(this.world.targetGroup.children, true);
-    if (hits.length > 0) {
-      const hit = hits[0];
-      const entity = hit.object.userData.entity;
-      if (entity && entity.onHit) {
-        entity.onHit(weapon.damage);
-        this.accumulators.hits += 1;
-        if (!entity.alive) {
-          this.world.targetGroup.remove(entity.object3D);
-          entity.destroy(this.world.scene);
-          this.accumulators.score += 100;
-        } else {
-          this.accumulators.score += 25;
-        }
+    const hits = this.raycaster.intersectObjects(this.world.hittableGroup.children, true);
+    if (hits.length === 0) return;
+
+    const hit = hits[0];
+    let entity = null;
+    let current = hit.object;
+    while (current) {
+      if (current.userData.entity) {
+        entity = current.userData.entity;
+        break;
+      }
+      current = current.parent;
+    }
+
+    if (entity && entity.alive && entity.onHit) {
+      const wasAlive = entity.alive;
+      const lethalDamage = Number.isFinite(entity.health) ? entity.health : weapon.damage;
+      entity.onHit(lethalDamage, hit.point);
+      this.accumulators.hits += 1;
+
+      if (wasAlive && !entity.alive) {
+        this.accumulators.score += 100;
+      } else {
+        this.accumulators.score += 25;
       }
     }
   }

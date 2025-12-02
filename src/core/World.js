@@ -10,6 +10,7 @@ import * as CANNON from "cannon-es";
 import Player from "../entities/Player.js";
 import Target from "../entities/Target.js";
 import SceneBuilder from "../systems/SceneBuilder.js";
+import Debris from "../entities/Debris.js";
 
 export default class World {
   constructor({ canvas, modeManager, assetManager, gameplayConfig }) {
@@ -31,10 +32,12 @@ export default class World {
 
     this.entities = [];
     this.targets = [];
+    this.debris = [];
     this.lights = [];
     this.ground = null;
     this.targetGroup = new Group();
-    this.scene.add(this.targetGroup);
+    this.hittableGroup = new Group();
+    this.scene.add(this.targetGroup, this.hittableGroup);
     this.sceneBuilder = new SceneBuilder(this.scene);
     this.spawnPoints = [];
     this.colliders = [];
@@ -85,6 +88,11 @@ export default class World {
     this.targets = [];
     this.entities = [];
     this.targetGroup.clear();
+    this.hittableGroup.clear();
+
+    // Remove debris
+    for (const d of this.debris) d.destroy();
+    this.debris = [];
 
     // Reset player position
     const spawn = sceneConfig?.playerSpawn
@@ -124,7 +132,17 @@ export default class World {
     this.targets.push(target);
     this.entities.push(target);
     this.targetGroup.add(target.object3D);
+    this.hittableGroup.add(target.hitbox);
     return target;
+  }
+
+  remove(entity) {
+    if (entity.object3D) {
+      this.targetGroup.remove(entity.object3D);
+    }
+    if (entity.hitbox) {
+      this.hittableGroup.remove(entity.hitbox);
+    }
   }
 
   update(dt) {
@@ -143,9 +161,19 @@ export default class World {
       ...(this.colliders || []),
       ...(this.dynamicColliders || [])
     ];
-    this.player.syncFromPhysics(colliders);
+    this.player.syncFromPhysics();
     for (const entity of this.entities) {
       if (entity.alive && entity.postPhysics) entity.postPhysics(dt, this);
+    }
+
+    // Update and clean up debris
+    for (let i = this.debris.length - 1; i >= 0; i--) {
+      const d = this.debris[i];
+      d.update(dt);
+      if (d.isDead()) {
+        d.destroy();
+        this.debris.splice(i, 1);
+      }
     }
 
     this.renderer.render(this.scene, this.player.camera);
