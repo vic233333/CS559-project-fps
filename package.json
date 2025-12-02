@@ -19,7 +19,7 @@
   "bugs": {
     "url": "https://github.com/vic233333/CS559-project-fps/issues"
   },
-  "homepage": "https://github.com/vic233333/CS559-project-fps#readme",
+  "homepage": "https://vic233333.github.io/CS559-project-fps/",
   "dependencies": {
     "cannon-es": "^0.20.0",
     "three": "^0.170.0"
