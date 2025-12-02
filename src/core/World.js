@@ -6,6 +6,7 @@ import {
   WebGLRenderer,
   SRGBColorSpace
 } from "three";
+import * as CANNON from "cannon-es";
 import Player from "../entities/Player.js";
 import Target from "../entities/Target.js";
 import SceneBuilder from "../systems/SceneBuilder.js";
@@ -36,6 +37,24 @@ export default class World {
     this.scene.add(this.targetGroup);
     this.sceneBuilder = new SceneBuilder(this.scene);
     this.spawnPoints = [];
+    this.colliders = [];
+    this.dynamicColliders = [];
+
+    this.physicsWorld = new CANNON.World({
+      gravity: new CANNON.Vec3(0, -gameplayConfig.player.gravity, 0)
+    });
+    this.physicsWorld.broadphase = new CANNON.NaiveBroadphase();
+    this.physicsWorld.solver.iterations = 10;
+    this.physicsMaterials = {
+      player: new CANNON.Material("player"),
+      static: new CANNON.Material("static")
+    };
+    const contact = new CANNON.ContactMaterial(
+      this.physicsMaterials.player,
+      this.physicsMaterials.static,
+      { friction: 0.0, restitution: 0.0 }
+    );
+    this.physicsWorld.addContactMaterial(contact);
 
     this.player = new Player({
       modeManager,
@@ -52,6 +71,7 @@ export default class World {
 
   setRenderProfile(profile) {
     this.renderProfile = profile;
+    this.renderProfile.world = this;
   }
 
   async setupEnvironment(modeConfig) {
@@ -74,6 +94,11 @@ export default class World {
 
     // Configure render clear color to match sky
     this.renderer.setClearColor(new Color(modeConfig.skyColor), 1);
+
+    // Reset physics world
+    this.physicsWorld.bodies.length = 0;
+    this._addStaticColliders();
+    this.player.setupPhysicsBody();
   }
 
   async preload(modeConfig) {
@@ -95,7 +120,7 @@ export default class World {
       radius,
       position
     });
-    await target.build(this.scene);
+    await target.build(this.scene, this);
     this.targets.push(target);
     this.entities.push(target);
     this.targetGroup.add(target.object3D);
@@ -103,12 +128,24 @@ export default class World {
   }
 
   update(dt) {
-    // Update player
+    // Apply input -> physics velocities
     this.player.update(dt, this);
-
-    // Update entities
     for (const entity of this.entities) {
-      if (entity.alive && entity.update) entity.update(dt, this);
+      if (entity.alive && entity.prePhysics) entity.prePhysics(dt, this);
+    }
+
+    // Step physics
+    const fixed = 1 / 60;
+    this.physicsWorld.step(fixed, dt, 3);
+
+    // Sync scene objects from physics bodies
+    const colliders = [
+      ...(this.colliders || []),
+      ...(this.dynamicColliders || [])
+    ];
+    this.player.syncFromPhysics(colliders);
+    for (const entity of this.entities) {
+      if (entity.alive && entity.postPhysics) entity.postPhysics(dt, this);
     }
 
     this.renderer.render(this.scene, this.player.camera);
@@ -124,6 +161,38 @@ export default class World {
   buildScene(sceneConfig) {
     this.sceneBuilder.build(sceneConfig);
     this.spawnPoints = this.sceneBuilder.spawnPoints;
+    this.colliders = [...this.sceneBuilder.colliders];
+    if (this.groundCollider) this.colliders.push(this.groundCollider);
     this.currentSceneConfig = sceneConfig;
+    // Build physics static bodies for these colliders
+    this._addStaticColliders();
+  }
+
+  refreshDynamicColliders() {
+    this.dynamicColliders = this.targets
+      .filter((t) => t.alive && t.getAABB)
+      .map((t) => t.getAABB());
+  }
+
+  _addStaticColliders() {
+    // Remove existing static bodies (keep player/targets)
+    this.physicsWorld.bodies = this.physicsWorld.bodies.filter((b) => b.isDynamic);
+    for (const c of this.colliders) {
+      const size = new Vector3(c.max.x - c.min.x, c.max.y - c.min.y, c.max.z - c.min.z);
+      const half = size.multiplyScalar(0.5);
+      const shape = new CANNON.Box(new CANNON.Vec3(half.x, half.y, half.z));
+      const body = new CANNON.Body({
+        mass: 0,
+        shape,
+        position: new CANNON.Vec3(
+          (c.max.x + c.min.x) / 2,
+          (c.max.y + c.min.y) / 2,
+          (c.max.z + c.min.z) / 2
+        ),
+        material: this.physicsMaterials.static
+      });
+      body.isStaticCollider = true;
+      this.physicsWorld.addBody(body);
+    }
   }
 }

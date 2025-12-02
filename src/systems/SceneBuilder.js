@@ -13,6 +13,7 @@ export default class SceneBuilder {
     this.scene = scene;
     this.staticsGroup = new Group();
     this.spawnPoints = [];
+    this.colliders = [];
     scene.add(this.staticsGroup);
   }
 
@@ -23,6 +24,7 @@ export default class SceneBuilder {
     });
     this.staticsGroup.clear();
     this.spawnPoints = [];
+    this.colliders = [];
   }
 
   build(sceneConfig) {
@@ -43,6 +45,11 @@ export default class SceneBuilder {
         mesh.receiveShadow = true;
         mesh.castShadow = true;
         this.staticsGroup.add(mesh);
+        // record collider AABB
+        const half = new Vector3(item.size[0] / 2, item.size[1] / 2, item.size[2] / 2);
+        const min = new Vector3(...item.pos).sub(half);
+        const max = new Vector3(...item.pos).add(half);
+        this.colliders.push({ min, max });
       }
       // TODO: extend to cylinder/model types.
     }

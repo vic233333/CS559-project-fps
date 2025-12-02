@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/vic233333/CS559-project-fps#readme",
   "dependencies": {
+    "cannon-es": "^0.20.0",
     "three": "^0.170.0"
   },
   "devDependencies": {

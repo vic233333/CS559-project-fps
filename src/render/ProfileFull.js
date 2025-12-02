@@ -33,6 +33,10 @@ export function createFullProfile(assetManager) {
       ground.receiveShadow = true;
       scene.add(ground);
       world.ground = ground;
+      world.groundCollider = {
+        min: { x: -120, y: -0.1, z: -120 },
+        max: { x: 120, y: 0.1, z: 120 }
+      };
 
       const hemi = new HemisphereLight("#a4c8ff", "#06080f", modeConfig.ambientIntensity);
       const dir = new DirectionalLight("#ffffff", modeConfig.directionalIntensity);

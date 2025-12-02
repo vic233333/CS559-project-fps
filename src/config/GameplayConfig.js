@@ -1,10 +1,13 @@
 export const GAMEPLAY_CONFIG = {
   sessionLength: 60, // seconds
   player: {
-    moveSpeed: 8,
-    sprintMultiplier: 1.6,
-    crouchSpeedMultiplier: 0.5, // crouch movement speed is 50% of normal
+    moveSpeed: 7.5, // base walk speed (m/s)
+    sprintMultiplier: 1.4,
+    crouchSpeedMultiplier: 0.65, // crouch movement speed is 65% of normal
     crouchHeightOffset: 0.5, // percentage of player height when crouching
+    maxSpeed: 10, // horizontal clamp
+    groundAccel: 30, // acceleration toward desired speed on ground
+    airAccel: 1.5, // weaker acceleration in air to avoid mid-air boosts
     jumpStrength: 8,
     gravity: 18,
     coyoteTime: 0.1,
