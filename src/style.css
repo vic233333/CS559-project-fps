@@ -48,27 +48,6 @@ body {
   font-size: 13px;
 }
 
-.mode-switch {
-  display: flex;
-  gap: 8px;
-}
-
-.mode-btn {
-  background: var(--panel);
-  color: var(--text);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 6px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.mode-btn.active {
-  border-color: var(--accent);
-  color: var(--accent);
-  box-shadow: 0 0 0 1px rgba(109, 211, 255, 0.35);
-}
-
 main {
   display: grid;
   grid-template-rows: 1fr;
@@ -246,14 +225,6 @@ button:hover {
     flex-direction: column;
     align-items: flex-start;
     gap: 6px;
-  }
-
-  .mode-switch {
-    width: 100%;
-  }
-
-  .mode-btn {
-    flex: 1;
   }
 
   #ui-layer {
