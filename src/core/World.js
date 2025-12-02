@@ -143,6 +143,16 @@ export default class World {
     if (entity.hitbox) {
       this.hittableGroup.remove(entity.hitbox);
     }
+    
+    const targetIndex = this.targets.indexOf(entity);
+    if (targetIndex > -1) {
+      this.targets.splice(targetIndex, 1);
+    }
+    
+    const entityIndex = this.entities.indexOf(entity);
+    if (entityIndex > -1) {
+      this.entities.splice(entityIndex, 1);
+    }
   }
 
   update(dt) {

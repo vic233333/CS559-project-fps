@@ -4,6 +4,11 @@ import * as CANNON from "cannon-es";
 import Debris from "./Debris.js";
 import { OBB } from "three/examples/jsm/math/OBB.js";
 
+const _hitboxBounds = new Box3();
+const _hitboxCenterWorld = new Vector3();
+const _hitboxSize = new Vector3();
+const _hitboxOffsetWorld = new Vector3();
+
 export default class Target extends Entity {
   constructor({ modeConfig, renderProfile, moving, speed, radius, position }) {
     super(new Group());
@@ -29,6 +34,8 @@ export default class Target extends Entity {
     this._inverseWorld = new Matrix4();
     this._obb = new OBB();
     this._boundsDirty = true;
+    this._hitboxOffset = new Vector3();
+    this._hitboxRadius = radius || 0.6;
   }
 
   async build(scene, world) {
@@ -40,41 +47,20 @@ export default class Target extends Entity {
     });
     if (mesh) this.object3D.add(mesh);
 
-    // Use the mesh's geometry for the hitbox, but simplify if it's too complex
-    let targetGeo;
-    if (mesh.isMesh) {
-      targetGeo = mesh.geometry;
-    } else {
-      mesh.traverse(child => {
-        if (child.isMesh && !targetGeo) {
-          targetGeo = child.geometry;
-        }
-      });
-    }
-
-    let hitboxGeo;
-    if (targetGeo && targetGeo.attributes.position.count > 100) {
-      // For complex models (like drones), use a simple sphere
-      hitboxGeo = new SphereGeometry(this.radius, 8, 8);
-    } else if (targetGeo) {
-      // For simple shapes, use their actual geometry
-      hitboxGeo = targetGeo;
-    } else {
-      // Fallback for GLTFs or other complex objects without a single geometry
-      hitboxGeo = new SphereGeometry(this.radius, 8, 8);
-    }
-
     const hitboxMat = new MeshBasicMaterial({
       color: 0xff0000,
       wireframe: true,
       visible: true // Visible for debugging; set to false to hide
     });
-    this.hitbox = new Mesh(hitboxGeo, hitboxMat);
-    this.hitbox.userData.entity = this;
 
     this.object3D.position.copy(this.position);
-    this.hitbox.position.copy(this.position);
     scene.add(this.object3D);
+
+    this._refreshHitboxDescriptor();
+    const hitboxGeo = new SphereGeometry(this._hitboxRadius || this.radius, 12, 12);
+    this.hitbox = new Mesh(hitboxGeo, hitboxMat);
+    this.hitbox.userData.entity = this;
+    this._syncHitboxTransform();
 
     // Ensure initial bounds are computed after placement
     this._boundsDirty = true;
@@ -172,8 +158,33 @@ export default class Target extends Entity {
   postPhysics() {
     if (this.body && this.alive) {
       this.object3D.position.copy(this.body.position);
-      this.hitbox.position.copy(this.body.position);
+      this._syncHitboxTransform();
       this._boundsDirty = true;
     }
+  }
+
+  _refreshHitboxDescriptor() {
+    if (!this.object3D) return;
+    this.object3D.updateWorldMatrix(true, true);
+    _hitboxBounds.setFromObject(this.object3D);
+    if (_hitboxBounds.isEmpty()) {
+      this._hitboxOffset.set(0, 0, 0);
+      this._hitboxRadius = this.radius;
+      return;
+    }
+    _hitboxBounds.getCenter(_hitboxCenterWorld);
+    this._hitboxOffset.copy(_hitboxCenterWorld);
+    this.object3D.worldToLocal(this._hitboxOffset);
+    _hitboxBounds.getSize(_hitboxSize);
+    this._hitboxRadius = Math.max(_hitboxSize.x, _hitboxSize.y, _hitboxSize.z) * 0.5 || this.radius;
+  }
+
+  _syncHitboxTransform() {
+    if (!this.hitbox || !this.object3D) return;
+    _hitboxOffsetWorld.copy(this._hitboxOffset);
+    _hitboxOffsetWorld.multiply(this.object3D.scale);
+    _hitboxOffsetWorld.applyQuaternion(this.object3D.quaternion);
+    this.hitbox.position.copy(this.object3D.position).add(_hitboxOffsetWorld);
+    this.hitbox.quaternion.copy(this.object3D.quaternion);
   }
 }

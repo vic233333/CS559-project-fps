@@ -1,4 +1,4 @@
-import { Clock, Raycaster, Vector2 } from "three";
+import { Clock, Raycaster, Vector2, Vector3, MathUtils } from "three";
 import GameState from "./GameState.js";
 import World from "./World.js";
 import AssetManager from "../systems/AssetManager.js";
@@ -10,6 +10,10 @@ import WeaponState from "../systems/WeaponState.js";
 import { MODE_CONFIGS } from "../config/ModeConfig.js";
 import { sceneForMode } from "../config/SceneConfig.js";
 import { createProfileForMode } from "../render/RenderProfiles.js";
+
+const _cameraPos = new Vector3();
+const _targetPos = new Vector3();
+const _vectorToTarget = new Vector3();
 
 export default class Game {
   constructor({ canvas, gameplayConfig }) {
@@ -46,6 +50,7 @@ export default class Game {
       shots: 0
     };
     this.autoPlay = false;
+    this.autoTarget = null;
 
     this._bindUI();
     this._bindModeSwitch();
@@ -95,6 +100,7 @@ export default class Game {
 
   async start(auto) {
     this.autoPlay = auto;
+    this.autoTarget = null;
     this.state.setState("loading");
     this.accumulators = {
       timeLeft: this.gameplayConfig.sessionLength,
@@ -124,7 +130,7 @@ export default class Game {
 
   handleShooting(dt) {
     const weapon = this.modeManager.currentConfig().weapon;
-    const wantsFire = this.autoPlay || this.input.isFiring();
+    const wantsFire = this.autoPlay ? Boolean(this.autoTarget) : this.input.isFiring();
     if (!wantsFire) return;
     if (this.input.consumeReload() && this.weaponState) {
       this.weaponState.startReload();
@@ -193,17 +199,66 @@ export default class Game {
     }
   }
 
+  _acquireAutoTarget(existingTarget) {
+    if (existingTarget?.alive) return existingTarget;
+    if (!this.world?.targets?.length) return null;
+    const player = this.world.player;
+    if (!player?.camera) return null;
+
+    this.world.scene.updateMatrixWorld(true);
+    player.camera.updateMatrixWorld(true);
+    player.camera.getWorldPosition(_cameraPos);
+
+    let best = null;
+    let bestDist = Infinity;
+    for (const target of this.world.targets) {
+      if (!target?.alive || !target.object3D) continue;
+      target.object3D.updateWorldMatrix(true, false);
+      target.object3D.getWorldPosition(_targetPos);
+      const distanceSq = _cameraPos.distanceToSquared(_targetPos);
+      if (distanceSq < bestDist) {
+        bestDist = distanceSq;
+        best = target;
+      }
+    }
+    return best;
+  }
+
+  _aimAtTarget(target) {
+    const player = this.world.player;
+    if (!player?.camera || !target?.object3D) return;
+    target.object3D.updateWorldMatrix(true, false);
+    target.object3D.getWorldPosition(_targetPos);
+    player.camera.getWorldPosition(_cameraPos);
+    _vectorToTarget.copy(_targetPos).sub(_cameraPos);
+    if (_vectorToTarget.lengthSq() === 0) return;
+    _vectorToTarget.normalize();
+
+    const yaw = Math.atan2(_vectorToTarget.x, -_vectorToTarget.z);
+    const pitch = Math.atan2(
+      _vectorToTarget.y,
+      Math.hypot(_vectorToTarget.x, _vectorToTarget.z)
+    );
+    const limit = Math.PI / 2 - 0.05;
+    player.heading.y = yaw;
+    player.heading.x = MathUtils.clamp(pitch, -limit, limit);
+    player.camera.quaternion.setFromEuler(player.heading);
+  }
+
   driveAuto(dt) {
     const player = this.world.player;
-    // Slowly rotate to scan the arena
-    player.heading.y += dt * 0.6;
-    player.heading.x = Math.sin(performance.now() * 0.001) * 0.1;
-    player.camera.quaternion.setFromEuler(player.heading);
+    if (!player?.camera) return;
+    const target = this._acquireAutoTarget(this.autoTarget);
+    this.autoTarget = target;
 
-    // Circle strafe movement
-    const radius = 0.2;
-    player.camera.position.x += Math.cos(performance.now() * 0.0015) * radius;
-    player.camera.position.z += Math.sin(performance.now() * 0.0015) * radius;
+    if (target) {
+      this._aimAtTarget(target);
+    } else {
+      // Fall back to a slow scan when no targets are available.
+      player.heading.y += dt * 0.6;
+      player.heading.x = Math.sin(performance.now() * 0.001) * 0.1;
+      player.camera.quaternion.setFromEuler(player.heading);
+    }
   }
 
   finishSession() {
