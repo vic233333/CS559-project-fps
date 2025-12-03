@@ -194,7 +194,11 @@ export default class Game {
   }
 
   _acquireAutoTarget(existingTarget) {
-    if (existingTarget?.alive) return existingTarget;
+    // Validate existing target more strictly
+    if (existingTarget?.alive && existingTarget?.hitbox && existingTarget.health > 0) {
+      return existingTarget;
+    }
+
     if (!this.world?.targets?.length) return null;
     const player = this.world.player;
     if (!player?.camera) return null;
@@ -206,8 +210,9 @@ export default class Game {
     let best = null;
     let bestDist = Infinity;
     for (const target of this.world.targets) {
-      // Use hitbox for targeting since that's what the raycaster actually hits
-      if (!target?.alive || !target.hitbox) continue;
+      // Only consider targets that are alive, have hitbox, and have health
+      if (!target?.alive || !target.hitbox || target.health <= 0) continue;
+
       target.hitbox.getWorldPosition(_targetPos);
       const distanceSq = _cameraPos.distanceToSquared(_targetPos);
       if (distanceSq < bestDist) {
@@ -220,35 +225,36 @@ export default class Game {
 
   _aimAtTarget(target) {
     const player = this.world.player;
-    // Use hitbox for aiming since that's what the raycaster actually hits
-    if (!player?.camera || !target?.hitbox) return;
-    target.hitbox.getWorldPosition(_targetPos);
-    player.camera.getWorldPosition(_cameraPos);
-    _vectorToTarget.copy(_targetPos).sub(_cameraPos);
-    if (_vectorToTarget.lengthSq() === 0) return;
-    _vectorToTarget.normalize();
+    if (!player?.camera || !target?.hitbox || !target.alive) return;
 
-    const yaw = Math.atan2(_vectorToTarget.x, -_vectorToTarget.z);
-    const pitch = Math.atan2(
-      _vectorToTarget.y,
-      Math.hypot(_vectorToTarget.x, _vectorToTarget.z)
-    );
+    target.hitbox.getWorldPosition(_targetPos);
+    player.camera.lookAt(_targetPos);
+
+    // Extract the Euler angles from camera rotation to update player heading
+    player.heading.setFromQuaternion(player.camera.quaternion, "YXZ");
+
+    // Clamp pitch to prevent looking straight up/down
     const limit = Math.PI / 2 - 0.05;
-    player.heading.y = yaw;
-    player.heading.x = MathUtils.clamp(pitch, -limit, limit);
+    player.heading.x = MathUtils.clamp(player.heading.x, -limit, limit);
+
+    // Reapply clamped rotation to camera
     player.camera.quaternion.setFromEuler(player.heading);
   }
 
   driveAuto(dt) {
     const player = this.world.player;
     if (!player?.camera) return;
+
+    // Always re-acquire target to ensure we have a valid one
     const target = this._acquireAutoTarget(this.autoTarget);
     this.autoTarget = target;
 
-    if (target) {
+    // Verify target is still valid before aiming
+    if (target && target.alive && target.hitbox && target.health > 0) {
       this._aimAtTarget(target);
     } else {
-      // Fall back to a slow scan when no targets are available.
+      // Clear invalid target and fall back to scanning
+      this.autoTarget = null;
       player.heading.y += dt * 0.6;
       player.heading.x = Math.sin(performance.now() * 0.001) * 0.1;
       player.camera.quaternion.setFromEuler(player.heading);
