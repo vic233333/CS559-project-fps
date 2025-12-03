@@ -1,5 +1,3 @@
-import { MODE_NAMES } from "./ModeConfig.js";
-
 // Simple, data-driven scene descriptions to avoid hard-coding geometry in World.
 export const SCENES = {
   prototype: {
@@ -45,6 +43,6 @@ export const SCENES = {
   }
 };
 
-export function sceneForMode(mode) {
-  return mode === MODE_NAMES.FULL ? SCENES.full : SCENES.prototype;
+export function sceneForMode() {
+  return SCENES.prototype;
 }
