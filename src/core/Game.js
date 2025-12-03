@@ -75,9 +75,9 @@ export default class Game {
     const cfg = MODE_CONFIGS[mode];
     if (!cfg) return;
     this.modeManager.setMode(mode);
-    const profile = createProfileForMode(this.assetManager);
+    const profile = createProfileForMode(mode, this.assetManager);
     this.world.setRenderProfile(profile);
-    const sceneConfig = sceneForMode();
+    const sceneConfig = sceneForMode(mode);
     this.weaponState = new WeaponState(cfg.weapon);
     await this.world.preload(cfg);
     await this.world.setupEnvironment(cfg);
