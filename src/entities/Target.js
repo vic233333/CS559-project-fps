@@ -1,4 +1,4 @@
-import { Vector3, Group, Color, Box3, Matrix4, SphereGeometry, MeshBasicMaterial, Mesh } from "three";
+import { Vector3, Group, Color, Box3, Matrix4, SphereGeometry, BoxGeometry, MeshBasicMaterial, Mesh } from "three";
 import Entity from "../core/Entity.js";
 import * as CANNON from "cannon-es";
 import Debris from "./Debris.js";
@@ -36,6 +36,8 @@ export default class Target extends Entity {
     this._boundsDirty = true;
     this._hitboxOffset = new Vector3();
     this._hitboxRadius = radius || 0.6;
+    this._hitboxSize = new Vector3();
+    this._hitboxShape = 'sphere'; // 'sphere' or 'box'
   }
 
   async build(scene, world) {
@@ -57,7 +59,12 @@ export default class Target extends Entity {
     scene.add(this.object3D);
 
     this._refreshHitboxDescriptor();
-    const hitboxGeo = new SphereGeometry(this._hitboxRadius || this.radius, 12, 12);
+    let hitboxGeo;
+    if (this._hitboxShape === 'box') {
+      hitboxGeo = new BoxGeometry(this._hitboxSize.x, this._hitboxSize.y, this._hitboxSize.z);
+    } else {
+      hitboxGeo = new SphereGeometry(this._hitboxRadius || this.radius, 12, 12);
+    }
     this.hitbox = new Mesh(hitboxGeo, hitboxMat);
     this.hitbox.userData.entity = this;
     this._syncHitboxTransform();
@@ -166,17 +173,36 @@ export default class Target extends Entity {
   _refreshHitboxDescriptor() {
     if (!this.object3D) return;
     this.object3D.updateWorldMatrix(true, true);
+
+    // Detect shape from the mesh geometry
+    let targetMesh = null;
+    this.object3D.traverse((child) => {
+      if (child.isMesh && child.geometry) {
+        targetMesh = child;
+      }
+    });
+
     _hitboxBounds.setFromObject(this.object3D);
     if (_hitboxBounds.isEmpty()) {
       this._hitboxOffset.set(0, 0, 0);
       this._hitboxRadius = this.radius;
+      this._hitboxShape = 'sphere';
       return;
     }
+
     _hitboxBounds.getCenter(_hitboxCenterWorld);
     this._hitboxOffset.copy(_hitboxCenterWorld);
     this.object3D.worldToLocal(this._hitboxOffset);
     _hitboxBounds.getSize(_hitboxSize);
-    this._hitboxRadius = Math.max(_hitboxSize.x, _hitboxSize.y, _hitboxSize.z) * 0.5 || this.radius;
+
+    // Determine hitbox shape based on geometry type
+    if (targetMesh && targetMesh.geometry.type === 'BoxGeometry') {
+      this._hitboxShape = 'box';
+      this._hitboxSize.copy(_hitboxSize);
+    } else {
+      this._hitboxShape = 'sphere';
+      this._hitboxRadius = Math.max(_hitboxSize.x, _hitboxSize.y, _hitboxSize.z) * 0.5 || this.radius;
+    }
   }
 
   _syncHitboxTransform() {
