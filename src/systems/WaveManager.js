@@ -58,7 +58,7 @@ export default class WaveManager {
     return this.waveIndex + 1;
   }
 
-  allWavesComplete() {
+  isAllWavesComplete() {
     return this.allWavesComplete;
   }
 
