@@ -39,12 +39,10 @@ export const UI_DEFAULTS = {
   continuousDuration: GAMEPLAY_CONFIG.sessionLength,
   // Default settings for creating new waves dynamically
   // Use the first wave as the base template
-  get baseWave() {
-    return {
-      duration: GAMEPLAY_CONFIG.waves[0].duration,
-      targets: GAMEPLAY_CONFIG.waves[0].targets,
-      speed: GAMEPLAY_CONFIG.waves[0].speed,
-      movingRatio: GAMEPLAY_CONFIG.waves[0].movingRatio
-    };
+  baseWave: {
+    duration: GAMEPLAY_CONFIG.waves[0].duration,
+    targets: GAMEPLAY_CONFIG.waves[0].targets,
+    speed: GAMEPLAY_CONFIG.waves[0].speed,
+    movingRatio: GAMEPLAY_CONFIG.waves[0].movingRatio
   }
 };
