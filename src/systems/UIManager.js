@@ -27,6 +27,8 @@ export default class UIManager {
     this.waveConfigList = document.getElementById("wave-config-list");
     this.continuousTargets = document.getElementById("continuous-targets");
     this.continuousDuration = document.getElementById("continuous-duration");
+    this.distributeAngleSlider = document.getElementById("distribute-angle-slider");
+    this.distributeAngleValue = document.getElementById("distribute-angle-value");
     this.waveSettings = document.querySelector(".wave-settings");
     this.continuousSettings = document.querySelector(".continuous-settings");
 
@@ -38,7 +40,8 @@ export default class UIManager {
       waveCount: UI_DEFAULTS.waveCount,
       waves: [],
       continuousTargets: UI_DEFAULTS.continuousTargets,
-      continuousDuration: UI_DEFAULTS.continuousDuration
+      continuousDuration: UI_DEFAULTS.continuousDuration,
+      distributeAngle: UI_DEFAULTS.distributeAngle
     };
 
     this._initDefaultWaves();
@@ -58,6 +61,17 @@ export default class UIManager {
         this.gameSettings.sensitivity = val;
         if (this.sensitivityValue) {
           this.sensitivityValue.textContent = val.toFixed(4);
+        }
+      });
+    }
+
+    // Distribute angle slider
+    if (this.distributeAngleSlider) {
+      this.distributeAngleSlider.addEventListener("input", (e) => {
+        const val = parseInt(e.target.value, 10);
+        this.gameSettings.distributeAngle = val;
+        if (this.distributeAngleValue) {
+          this.distributeAngleValue.textContent = `${val}°`;
         }
       });
     }
@@ -218,6 +232,12 @@ export default class UIManager {
     }
     if (this.continuousDuration) {
       this.continuousDuration.value = this.gameSettings.continuousDuration;
+    }
+    if (this.distributeAngleSlider) {
+      this.distributeAngleSlider.value = this.gameSettings.distributeAngle;
+    }
+    if (this.distributeAngleValue) {
+      this.distributeAngleValue.textContent = `${this.gameSettings.distributeAngle}°`;
     }
   }
 

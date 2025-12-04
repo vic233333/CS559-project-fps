@@ -37,6 +37,7 @@ export const UI_DEFAULTS = {
   waveCount: GAMEPLAY_CONFIG.waves.length,
   continuousTargets: 5,
   continuousDuration: GAMEPLAY_CONFIG.sessionLength,
+  distributeAngle: 180,
   // Default settings for creating new waves dynamically
   // Use the first wave as the base template
   baseWave: {
