@@ -2,6 +2,10 @@
 
 A first-person shooter training game built with Three.js and Cannon.js.
 
+## GroupID
+
+1145
+
 ## Live Demo
 
 The game is deployed and playable at: https://vic233333.github.io/CS559-project-fps/
