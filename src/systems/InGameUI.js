@@ -30,6 +30,11 @@ export default class InGameUI {
     this.lastSensitivityUpdate = 0;
     this.scoreboardUpdateInterval = 100; // ms - throttle to ~10 updates per second
     this.sensitivityUpdateInterval = 100; // ms
+    
+    // Sensitivity panel dimensions (shared between creation and hit detection)
+    this.panelWidth = 1.2;
+    this.panelDepth = 0.8;
+    this.panelHeight = 0.1;
   }
 
   async build() {
@@ -123,9 +128,6 @@ export default class InGameUI {
   }
 
   _createSensitivityPanels() {
-    const panelWidth = 1.2;
-    const panelDepth = 0.8;
-    const panelHeight = 0.1;
     const spacing = 1.4;
     const baseY = 0.05;
     const baseZ = 8; // In front of player spawn
@@ -143,7 +145,7 @@ export default class InGameUI {
       const [label, delta, color] = cfg;
       const xPos = (i - 2) * spacing;
 
-      const panel = this._createSensitivityPanel(label, delta, color, panelWidth, panelDepth, panelHeight);
+      const panel = this._createSensitivityPanel(label, delta, color, this.panelWidth, this.panelDepth, this.panelHeight);
       panel.position.set(xPos, baseY, baseZ);
       panel.userData.sensitivityDelta = delta;
       panel.userData.isSensitivityPanel = true;
@@ -275,8 +277,8 @@ export default class InGameUI {
       if (panel.userData.isCenter) continue; // Center panel doesn't adjust
 
       const panelPos = panel.position;
-      const halfWidth = 0.6;
-      const halfDepth = 0.4;
+      const halfWidth = this.panelWidth / 2;
+      const halfDepth = this.panelDepth / 2;
 
       if (
         hitPoint.x >= panelPos.x - halfWidth &&
