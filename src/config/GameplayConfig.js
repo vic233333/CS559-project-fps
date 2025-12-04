@@ -33,15 +33,18 @@ export const GAMEPLAY_CONFIG = {
 export const UI_DEFAULTS = {
   sensitivity: 0.0025,
   gameMode: "wave", // "wave" or "continuous"
-  sessionDuration: 60,
-  waveCount: 5,
+  sessionDuration: GAMEPLAY_CONFIG.sessionLength,
+  waveCount: GAMEPLAY_CONFIG.waves.length,
   continuousTargets: 5,
-  continuousDuration: 60,
+  continuousDuration: GAMEPLAY_CONFIG.sessionLength,
   // Default settings for creating new waves dynamically
-  baseWave: {
-    duration: 12,
-    targets: 6,
-    speed: 1.0,
-    movingRatio: 0.2
+  // Use the first wave as the base template
+  get baseWave() {
+    return {
+      duration: GAMEPLAY_CONFIG.waves[0].duration,
+      targets: GAMEPLAY_CONFIG.waves[0].targets,
+      speed: GAMEPLAY_CONFIG.waves[0].speed,
+      movingRatio: GAMEPLAY_CONFIG.waves[0].movingRatio
+    };
   }
 };
