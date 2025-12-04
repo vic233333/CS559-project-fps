@@ -10,6 +10,7 @@ export default class WaveManager {
     this.elapsed = 0;
     this.activeTargets = [];
     this.onWave = () => {};
+    this.allWavesComplete = false;
   }
 
   setSpawnPoints(points) {
@@ -22,12 +23,16 @@ export default class WaveManager {
 
   async start() {
     this.waveIndex = 0;
+    this.allWavesComplete = false;
     await this.beginWave(this.waveIndex);
   }
 
   async beginWave(index) {
     const wave = this.config.waves[index];
-    if (!wave) return;
+    if (!wave) {
+      this.allWavesComplete = true;
+      return;
+    }
     this.elapsed = 0;
     this.activeTargets = [];
 
@@ -53,9 +58,16 @@ export default class WaveManager {
     return this.waveIndex + 1;
   }
 
+  isAllWavesComplete() {
+    return this.allWavesComplete;
+  }
+
   update(dt) {
     const wave = this.config.waves[this.waveIndex];
-    if (!wave) return;
+    if (!wave) {
+      this.allWavesComplete = true;
+      return;
+    }
     this.elapsed += dt;
 
     // Remove dead targets from active list
@@ -63,19 +75,35 @@ export default class WaveManager {
 
     const waveExpired = this.elapsed >= wave.duration;
     const cleared = this.activeTargets.length === 0;
-    if ((waveExpired || cleared) && this.waveIndex < this.config.waves.length - 1) {
-      this.waveIndex += 1;
-      this.beginWave(this.waveIndex);
-    }
 
-    // TODO: Spawn tougher enemy types or add projectiles in later waves to satisfy automation/AI goals.
+    if (waveExpired || cleared) {
+      if (this.waveIndex < this.config.waves.length - 1) {
+        this.waveIndex += 1;
+        this.beginWave(this.waveIndex);
+      } else {
+        // All waves completed
+        this.allWavesComplete = true;
+      }
+    }
   }
 
   _fallbackSpawn(i, total) {
-    const angle = (i / total) * Math.PI * 2;
+    // Spawn targets in front of player (negative Z direction)
+    // Get the distribution angle from config (defaults to 180 degrees = Math.PI radians)
+    const distributeAngle = this.config.distributeAngle !== undefined 
+      ? (this.config.distributeAngle * Math.PI / 180) 
+      : Math.PI;
+    
+    // Distribute evenly within the specified angle range
+    let angle;
+    if (total === 1) {
+      angle = 0;
+    } else {
+      angle = (i / (total - 1)) * distributeAngle - distributeAngle / 2;
+    }
     const radius = this.config.target.moveRadius;
     const x = Math.cos(angle) * radius;
-    const z = Math.sin(angle) * radius;
+    const z = -Math.abs(Math.sin(angle) * radius) - 5; // Always in front (negative Z)
     return new Vector3(x, this.config.playerHeight || 1.2, z);
   }
 }

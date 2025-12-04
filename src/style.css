@@ -709,3 +709,174 @@ body::after {
     transform: translate(0);
   }
 }
+
+/* --- Settings Panel --- */
+.settings-panel {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.settings-panel::before {
+  content: "SYS.CONFIG // 02";
+}
+
+.settings-section {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--c-panel-border);
+}
+
+.settings-section:last-of-type {
+  border-bottom: none;
+}
+
+.settings-section h3 {
+  font-size: 14px;
+  color: var(--c-primary);
+  margin-bottom: 12px;
+  letter-spacing: 0.1em;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.setting-row label {
+  font-size: 14px;
+  color: var(--c-text-muted);
+  min-width: 150px;
+}
+
+.setting-row input[type="range"] {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  appearance: none;
+  cursor: pointer;
+}
+
+.setting-row input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--c-primary);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.setting-row input[type="number"] {
+  width: 80px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--c-panel-border);
+  color: var(--c-text-main);
+  font-family: var(--f-display);
+  font-size: 14px;
+}
+
+.setting-row input[type="number"]:focus {
+  outline: none;
+  border-color: var(--c-primary);
+}
+
+.setting-row span {
+  font-family: var(--f-display);
+  font-size: 14px;
+  color: var(--c-primary);
+  min-width: 60px;
+}
+
+.radio-row {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.radio-row label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  min-width: auto;
+}
+
+.radio-row input[type="radio"] {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--c-panel-border);
+  border-radius: 50%;
+  cursor: pointer;
+  position: relative;
+}
+
+.radio-row input[type="radio"]:checked {
+  border-color: var(--c-primary);
+}
+
+.radio-row input[type="radio"]:checked::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  background: var(--c-primary);
+  border-radius: 50%;
+}
+
+.wave-config-list {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 12px;
+}
+
+.wave-config-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  margin-bottom: 8px;
+  border-left: 2px solid var(--c-panel-border);
+}
+
+.wave-config-item span {
+  font-size: 12px;
+  color: var(--c-text-muted);
+  min-width: 60px;
+}
+
+.wave-config-item input {
+  width: 60px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--c-panel-border);
+  color: var(--c-text-main);
+  font-family: var(--f-display);
+  font-size: 12px;
+}
+
+/* --- Pause Screen --- */
+#pause-screen::before {
+  content: "SYS.PAUSE // 03";
+}
+
+/* --- Weapon Row in HUD --- */
+.weapon-row {
+  margin-top: 8px;
+}
+
+#hud-weapon {
+  border-right-color: #00ffcc;
+}
+
+#hud-sensitivity {
+  font-size: 16px;
+  border-right-color: var(--c-text-muted);
+}
