@@ -24,17 +24,6 @@ export default class InGameUI {
     this.lastWaveNumber = null;
     this.lastIsWaveMode = null;
     this.lastSensitivity = -1;
-    
-    // Throttling for canvas rendering updates
-    this.lastScoreboardUpdate = 0;
-    this.lastSensitivityUpdate = 0;
-    this.scoreboardUpdateInterval = 100; // ms - throttle to ~10 updates per second
-    this.sensitivityUpdateInterval = 100; // ms
-    
-    // Sensitivity panel dimensions (shared between creation and hit detection)
-    this.panelWidth = 1.2;
-    this.panelDepth = 0.8;
-    this.panelHeight = 0.1;
   }
 
   async build() {
@@ -128,6 +117,9 @@ export default class InGameUI {
   }
 
   _createSensitivityPanels() {
+    const panelWidth = 1.2;
+    const panelDepth = 0.8;
+    const panelHeight = 0.1;
     const spacing = 1.4;
     const baseY = 0.05;
     const baseZ = 8; // In front of player spawn
@@ -145,7 +137,7 @@ export default class InGameUI {
       const [label, delta, color] = cfg;
       const xPos = (i - 2) * spacing;
 
-      const panel = this._createSensitivityPanel(label, delta, color, this.panelWidth, this.panelDepth, this.panelHeight);
+      const panel = this._createSensitivityPanel(label, delta, color, panelWidth, panelDepth, panelHeight);
       panel.position.set(xPos, baseY, baseZ);
       panel.userData.sensitivityDelta = delta;
       panel.userData.isSensitivityPanel = true;
@@ -238,36 +230,29 @@ export default class InGameUI {
   }
 
   update(score, time, wave, sensitivity) {
-    const now = performance.now();
-    
     // Convert wave parameter to structured format
     const isWaveMode = typeof wave === "number";
     const waveNumber = isWaveMode ? wave : null;
 
-    // Throttle scoreboard updates - only render if values changed AND enough time has passed
-    const scoreboardNeedsUpdate = 
+    // Only update scoreboard if values changed
+    if (
       score !== this.lastScore ||
       Math.floor(time) !== Math.floor(this.lastTime) ||
       waveNumber !== this.lastWaveNumber ||
-      isWaveMode !== this.lastIsWaveMode;
-    
-    if (scoreboardNeedsUpdate && (now - this.lastScoreboardUpdate >= this.scoreboardUpdateInterval)) {
+      isWaveMode !== this.lastIsWaveMode
+    ) {
       this._renderScoreboard(score, time, { waveNumber, isWaveMode });
       this.scoreboardTexture.needsUpdate = true;
       this.lastScore = score;
       this.lastTime = time;
       this.lastWaveNumber = waveNumber;
       this.lastIsWaveMode = isWaveMode;
-      this.lastScoreboardUpdate = now;
     }
 
-    // Throttle sensitivity display updates - only render if changed AND enough time has passed
-    const sensitivityNeedsUpdate = Math.abs(sensitivity - this.lastSensitivity) > 0.00001;
-    
-    if (sensitivityNeedsUpdate && (now - this.lastSensitivityUpdate >= this.sensitivityUpdateInterval)) {
+    // Update sensitivity display if changed
+    if (Math.abs(sensitivity - this.lastSensitivity) > 0.00001) {
       this.updateSensitivityDisplay(sensitivity);
       this.lastSensitivity = sensitivity;
-      this.lastSensitivityUpdate = now;
     }
   }
 
@@ -277,8 +262,8 @@ export default class InGameUI {
       if (panel.userData.isCenter) continue; // Center panel doesn't adjust
 
       const panelPos = panel.position;
-      const halfWidth = this.panelWidth / 2;
-      const halfDepth = this.panelDepth / 2;
+      const halfWidth = 0.6;
+      const halfDepth = 0.4;
 
       if (
         hitPoint.x >= panelPos.x - halfWidth &&

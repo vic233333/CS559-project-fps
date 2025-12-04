@@ -1,5 +1,3 @@
-import { GAMEPLAY_CONFIG, UI_DEFAULTS } from "../config/GameplayConfig.js";
-
 export default class UIManager {
   constructor() {
     this.menu = document.getElementById("menu-screen");
@@ -34,14 +32,14 @@ export default class UIManager {
 
     // Game settings state
     this.gameSettings = {
-      sensitivity: UI_DEFAULTS.sensitivity,
-      gameMode: UI_DEFAULTS.gameMode,
-      sessionDuration: UI_DEFAULTS.sessionDuration,
-      waveCount: UI_DEFAULTS.waveCount,
+      sensitivity: 0.0025,
+      gameMode: "wave", // "wave" or "continuous"
+      sessionDuration: 60,
+      waveCount: 5,
       waves: [],
-      continuousTargets: UI_DEFAULTS.continuousTargets,
-      continuousDuration: UI_DEFAULTS.continuousDuration,
-      distributeAngle: UI_DEFAULTS.distributeAngle
+      continuousTargets: 5,
+      continuousDuration: 60,
+      distributeAngle: 180 // Default to 180 degrees
     };
 
     this._initDefaultWaves();
@@ -49,8 +47,13 @@ export default class UIManager {
   }
 
   _initDefaultWaves() {
-    // Use deep copy to avoid modifying the original config
-    this.gameSettings.waves = GAMEPLAY_CONFIG.waves.map(wave => ({ ...wave }));
+    this.gameSettings.waves = [
+      { id: 1, duration: 12, targets: 6, speed: 1.0, movingRatio: 0.2 },
+      { id: 2, duration: 12, targets: 8, speed: 1.2, movingRatio: 0.4 },
+      { id: 3, duration: 14, targets: 10, speed: 1.4, movingRatio: 0.5 },
+      { id: 4, duration: 14, targets: 12, speed: 1.6, movingRatio: 0.6 },
+      { id: 5, duration: 16, targets: 14, speed: 1.8, movingRatio: 0.7 }
+    ];
   }
 
   _bindSettingsEvents() {
@@ -127,7 +130,12 @@ export default class UIManager {
 
   _adjustWaveConfigs(count) {
     while (this.gameSettings.waves.length < count) {
-      const lastWave = this.gameSettings.waves[this.gameSettings.waves.length - 1] || UI_DEFAULTS.baseWave;
+      const lastWave = this.gameSettings.waves[this.gameSettings.waves.length - 1] || {
+        duration: 12,
+        targets: 6,
+        speed: 1.0,
+        movingRatio: 0.2
+      };
       this.gameSettings.waves.push({
         id: this.gameSettings.waves.length + 1,
         duration: lastWave.duration + 2,
