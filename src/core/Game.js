@@ -97,6 +97,13 @@ export default class Game {
       hits: 0,
       shots: 0
     };
+    this.statsHistory = [];
+    this.statsTimer = 0;
+
+    if (!auto) {
+      await this.ui.startCountdown();
+    }
+
     await this.applyMode(this.modeManager.currentMode());
     await this.waveManager.start();
     this.state.setState("playing");
@@ -173,6 +180,17 @@ export default class Game {
     const dt = this.clock.getDelta();
     if (this.state.is("playing")) {
       this.accumulators.timeLeft -= dt;
+
+      // Record stats every 1s
+      this.statsTimer += dt;
+      if (this.statsTimer >= 1.0) {
+        this.statsTimer = 0;
+        this.statsHistory.push({
+          time: this.gameplayConfig.sessionLength - this.accumulators.timeLeft,
+          score: this.accumulators.score
+        });
+      }
+
       if (this.accumulators.timeLeft <= 0) {
         this.finishSession();
       }
@@ -271,7 +289,8 @@ export default class Game {
     this.ui.updateEnd({
       score: this.accumulators.score,
       wave: this.waveManager.currentWaveNumber(),
-      accuracy
+      accuracy,
+      history: this.statsHistory
     });
     document.exitPointerLock?.();
   }
