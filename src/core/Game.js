@@ -68,6 +68,27 @@ export default class Game {
     document.getElementById("auto-btn").addEventListener("click", () => this.start(true));
     document.getElementById("restart-btn").addEventListener("click", () => this.start(false));
     document.getElementById("menu-btn").addEventListener("click", () => this.toMenu());
+    
+    const modeToggleBtn = document.getElementById("mode-toggle-btn");
+    if (modeToggleBtn) {
+      modeToggleBtn.addEventListener("click", () => this.toggleMode());
+      this.updateModeButton();
+    }
+  }
+
+  toggleMode() {
+    const currentMode = this.modeManager.currentMode();
+    const newMode = currentMode === "prototype" ? "full" : "prototype";
+    this.applyMode(newMode);
+    this.updateModeButton();
+  }
+
+  updateModeButton() {
+    const modeToggleBtn = document.getElementById("mode-toggle-btn");
+    if (modeToggleBtn) {
+      const cfg = this.modeManager.currentConfig();
+      modeToggleBtn.textContent = `Mode: ${cfg.label}`;
+    }
   }
 
 
@@ -75,7 +96,7 @@ export default class Game {
     const cfg = MODE_CONFIGS[mode];
     if (!cfg) return;
     this.modeManager.setMode(mode);
-    const profile = createProfileForMode(this.assetManager);
+    const profile = createProfileForMode(this.assetManager, mode);
     this.world.setRenderProfile(profile);
     const sceneConfig = sceneForMode();
     this.weaponState = new WeaponState(cfg.weapon);

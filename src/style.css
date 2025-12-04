@@ -113,6 +113,30 @@ h3,
   margin-right: 8px;
 }
 
+.mode-toggle {
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  color: var(--c-bg);
+  background: var(--c-primary);
+  border: 2px solid var(--c-primary);
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+}
+
+.mode-toggle:hover {
+  background: transparent;
+  color: var(--c-primary);
+}
+
+.mode-toggle:active {
+  transform: scale(0.98);
+}
+
+
 /* --- Main Layout --- */
 main {
   width: 100vw;
