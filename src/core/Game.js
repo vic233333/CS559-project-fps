@@ -7,7 +7,7 @@ import UIManager from "../systems/UIManager.js";
 import ModeManager from "../systems/ModeManager.js";
 import WaveManager from "../systems/WaveManager.js";
 import WeaponState from "../systems/WeaponState.js";
-import { MODE_CONFIGS } from "../config/ModeConfig.js";
+import { MODE_CONFIGS, MODE_NAMES } from "../config/ModeConfig.js";
 import { sceneForMode } from "../config/SceneConfig.js";
 import { createProfileForMode } from "../render/RenderProfiles.js";
 
@@ -19,6 +19,7 @@ export default class Game {
   constructor({ canvas, gameplayConfig }) {
     this.canvas = canvas;
     this.gameplayConfig = gameplayConfig;
+    this.isTogglingMode = false;
 
     this.modeManager = new ModeManager();
     this.state = new GameState();
@@ -76,11 +77,18 @@ export default class Game {
     }
   }
 
-  toggleMode() {
-    const currentMode = this.modeManager.currentMode();
-    const newMode = currentMode === "prototype" ? "full" : "prototype";
-    this.applyMode(newMode);
-    this.updateModeButton();
+  async toggleMode() {
+    if (this.isTogglingMode) return;
+    this.isTogglingMode = true;
+    
+    try {
+      const currentMode = this.modeManager.currentMode();
+      const newMode = currentMode === MODE_NAMES.PROTOTYPE ? MODE_NAMES.FULL : MODE_NAMES.PROTOTYPE;
+      await this.applyMode(newMode);
+      this.updateModeButton();
+    } finally {
+      this.isTogglingMode = false;
+    }
   }
 
   updateModeButton() {

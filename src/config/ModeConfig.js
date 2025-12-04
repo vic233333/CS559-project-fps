@@ -41,6 +41,9 @@ export const MODE_CONFIGS = {
     },
     geometryStyle: "full", // allows loaded objects and textures
     postprocessing: true,
+    // gltfTargets: Array of GLTF model configurations for targets.
+    // Each entry should have: { url: string, scale?: number }
+    // Example: [{ url: "/models/target.glb", scale: 1.5 }]
     gltfTargets: [] // can be populated with GLTF models if available
   }
 };
