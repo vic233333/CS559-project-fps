@@ -5,6 +5,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CS559 FPS Range</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Rajdhani:wght@500;600;700&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 
@@ -17,6 +22,20 @@
     </div>
   </header>
 
+  <div id="loading-screen">
+    <div class="loader-content">
+      <div class="logo">FPS // SYS.BOOT</div>
+      <div class="progress-bar">
+        <div class="fill"></div>
+      </div>
+      <div class="boot-log">
+        <p>> INITIALIZING KERNEL...</p>
+        <p>> LOADING ASSETS...</p>
+        <p>> ESTABLISHING UPLINK...</p>
+      </div>
+    </div>
+  </div>
+
   <main>
     <div id="canvas-container">
       <canvas id="game-canvas"></canvas>
@@ -24,7 +43,7 @@
     </div>
 
     <section id="overlay-layer">
-      <div id="menu-screen" class="panel visible">
+      <div id="menu-screen" class="panel">
         <h1>FPS Training Grounds</h1>
         <p class="desc">
           Welcome to the FPS Training Grounds! Hone your shooting skills in this immersive first-person
@@ -49,6 +68,20 @@
           <p id="final-wave">Wave Reached: 1</p>
           <p id="final-accuracy">Accuracy: 0%</p>
         </div>
+
+        <!-- Data Charts -->
+        <div class="charts-container">
+          <h3>PERFORMANCE ANALYSIS</h3>
+          <canvas id="performance-chart" width="400" height="150"></canvas>
+
+          <div class="chart-row">
+            <span>ACCURACY</span>
+            <div class="bar-bg">
+              <div id="bar-accuracy" class="bar-fill" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+
         <div class="options">
           <button id="restart-btn">Restart</button>
           <button id="menu-btn">Back to Menu</button>
@@ -66,6 +99,8 @@
         </div>
       </div>
     </section>
+
+    <div id="countdown-layer"></div>
 
 
 
