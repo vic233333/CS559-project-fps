@@ -89,7 +89,18 @@ export default class WaveManager {
 
   _fallbackSpawn(i, total) {
     // Spawn targets in front of player (negative Z direction)
-    const angle = (i / total) * Math.PI - Math.PI / 2; // Spread from -90 to +90 degrees
+    // Get the distribution angle from config (defaults to 180 degrees = Math.PI radians)
+    const distributeAngle = this.config.distributeAngle !== undefined 
+      ? (this.config.distributeAngle * Math.PI / 180) 
+      : Math.PI;
+    
+    // Distribute evenly within the specified angle range
+    let angle;
+    if (total === 1) {
+      angle = 0;
+    } else {
+      angle = (i / (total - 1)) * distributeAngle - distributeAngle / 2;
+    }
     const radius = this.config.target.moveRadius;
     const x = Math.cos(angle) * radius;
     const z = -Math.abs(Math.sin(angle) * radius) - 5; // Always in front (negative Z)

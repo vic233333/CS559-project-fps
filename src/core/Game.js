@@ -169,6 +169,9 @@ export default class Game {
       this.gameplayConfig.sessionLength = settings.continuousDuration;
     }
 
+    // Apply distribute angle
+    this.gameplayConfig.distributeAngle = settings.distributeAngle;
+
     // Update waveManager with new config
     this.waveManager.config = this.gameplayConfig;
   }
