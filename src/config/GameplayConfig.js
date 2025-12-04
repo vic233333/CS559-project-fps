@@ -28,3 +28,20 @@ export const GAMEPLAY_CONFIG = {
     respawnDelay: 2.5
   }
 };
+
+// Default UI settings
+export const UI_DEFAULTS = {
+  sensitivity: 0.0025,
+  gameMode: "wave", // "wave" or "continuous"
+  sessionDuration: 60,
+  waveCount: 5,
+  continuousTargets: 5,
+  continuousDuration: 60,
+  // Default settings for creating new waves dynamically
+  baseWave: {
+    duration: 12,
+    targets: 6,
+    speed: 1.0,
+    movingRatio: 0.2
+  }
+};
