@@ -26,6 +26,7 @@ export default class Player {
     this.jumpBufferTimer = 0;
     this.isCrouching = false;
     this.isMoving = false;
+    this.weaponSpeedMultiplier = 1.0;
 
     this.stateMachine = new StateMachine("idle");
     this._setupStates();
@@ -82,7 +83,8 @@ export default class Player {
     const targetSpeed =
       cfg.moveSpeed *
       (sprint && this.onGround ? cfg.sprintMultiplier : 1) *
-      (crouching ? cfg.crouchSpeedMultiplier : 1);
+      (crouching ? cfg.crouchSpeedMultiplier : 1) *
+      this.weaponSpeedMultiplier;
     const moving = moveAxis.lengthSq() > 0.01;
     this.isMoving = moving;
 
