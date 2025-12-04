@@ -33,8 +33,8 @@ export default class InGameUI {
 
   _createScoreboard() {
     // Create a large vertical plane for the scoreboard
-    const width = 8;
-    const height = 4;
+    const width = 30;
+    const height = 15;
     const canvas = document.createElement("canvas");
     canvas.width = 1024;
     canvas.height = 512;
@@ -53,7 +53,7 @@ export default class InGameUI {
 
     this.scoreboardMesh = new Mesh(geometry, material);
     // Position the scoreboard in front of the player, high up
-    this.scoreboardMesh.position.set(0, 4, -12);
+    this.scoreboardMesh.position.set(0, height / 2 + 2, -12);
     this.scoreboardMesh.rotation.x = -0.1; // Slight tilt toward player
 
     this.group.add(this.scoreboardMesh);

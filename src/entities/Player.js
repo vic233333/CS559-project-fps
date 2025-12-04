@@ -40,10 +40,10 @@ export default class Player {
       this.body.position.set(target.x, target.y, target.z);
       this.body.velocity.set(0, 0, 0);
       this.body.angularVelocity.set(0, 0, 0);
-    } else {
-      this.camera.position.copy(target);
     }
+    this.camera.position.copy(target);
     this.heading.set(0, 0, 0, "YXZ");
+    this.interpolatedEyeOffset = this.eyeHeightStanding;
     this.isCrouching = false;
     this.onGround = true;
   }
