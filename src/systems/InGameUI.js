@@ -21,7 +21,8 @@ export default class InGameUI {
     this.sensitivityPanels = [];
     this.lastScore = -1;
     this.lastTime = -1;
-    this.lastWave = -1;
+    this.lastWaveNumber = null;
+    this.lastIsWaveMode = null;
     this.lastSensitivity = -1;
   }
 
@@ -40,7 +41,7 @@ export default class InGameUI {
     canvas.height = 512;
     this.scoreboardCanvas = canvas;
 
-    this._renderScoreboard(0, 60, 1);
+    this._renderScoreboard(0, 60, { waveNumber: 1, isWaveMode: true });
 
     this.scoreboardTexture = new CanvasTexture(canvas);
     const geometry = new PlaneGeometry(width, height);
@@ -59,7 +60,7 @@ export default class InGameUI {
     this.group.add(this.scoreboardMesh);
   }
 
-  _renderScoreboard(score, time, wave) {
+  _renderScoreboard(score, time, { waveNumber, isWaveMode }) {
     const ctx = this.scoreboardCanvas.getContext("2d");
     const w = this.scoreboardCanvas.width;
     const h = this.scoreboardCanvas.height;
@@ -101,7 +102,7 @@ export default class InGameUI {
     ctx.fillText(`SCORE: ${score}`, 40, 400);
 
     ctx.textAlign = "right";
-    const waveText = typeof wave === "number" ? `WAVE: ${wave}` : `MODE: ${wave}`;
+    const waveText = isWaveMode ? `WAVE: ${waveNumber}` : `MODE: ∞`;
     ctx.fillText(waveText, w - 40, 400);
 
     // Bottom decorative line
@@ -229,13 +230,23 @@ export default class InGameUI {
   }
 
   update(score, time, wave, sensitivity) {
+    // Convert wave parameter to structured format
+    const isWaveMode = typeof wave === "number";
+    const waveNumber = isWaveMode ? wave : null;
+
     // Only update scoreboard if values changed
-    if (score !== this.lastScore || Math.floor(time) !== Math.floor(this.lastTime) || wave !== this.lastWave) {
-      this._renderScoreboard(score, time, wave);
+    if (
+      score !== this.lastScore ||
+      Math.floor(time) !== Math.floor(this.lastTime) ||
+      waveNumber !== this.lastWaveNumber ||
+      isWaveMode !== this.lastIsWaveMode
+    ) {
+      this._renderScoreboard(score, time, { waveNumber, isWaveMode });
       this.scoreboardTexture.needsUpdate = true;
       this.lastScore = score;
       this.lastTime = time;
-      this.lastWave = wave;
+      this.lastWaveNumber = waveNumber;
+      this.lastIsWaveMode = isWaveMode;
     }
 
     // Update sensitivity display if changed
