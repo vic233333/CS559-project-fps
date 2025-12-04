@@ -28,3 +28,21 @@ export const GAMEPLAY_CONFIG = {
     respawnDelay: 2.5
   }
 };
+
+// Default UI settings
+export const UI_DEFAULTS = {
+  sensitivity: 0.0025,
+  gameMode: "wave", // "wave" or "continuous"
+  sessionDuration: GAMEPLAY_CONFIG.sessionLength,
+  waveCount: GAMEPLAY_CONFIG.waves.length,
+  continuousTargets: 5,
+  continuousDuration: GAMEPLAY_CONFIG.sessionLength,
+  // Default settings for creating new waves dynamically
+  // Use the first wave as the base template
+  baseWave: {
+    duration: GAMEPLAY_CONFIG.waves[0].duration,
+    targets: GAMEPLAY_CONFIG.waves[0].targets,
+    speed: GAMEPLAY_CONFIG.waves[0].speed,
+    movingRatio: GAMEPLAY_CONFIG.waves[0].movingRatio
+  }
+};
