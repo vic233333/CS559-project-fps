@@ -253,7 +253,7 @@ export default class Game {
     for (let i = 0; i < needed; i++) {
       const spawn =
         this.world.spawnPoints.length > 0
-          ? this.world.spawnPoints[i % this.world.spawnPoints.length].position
+          ? this.world.spawnPoints[Math.floor(Math.random() * this.world.spawnPoints.length)].position
           : new Vector3((Math.random() - 0.5) * 10, 1.2, -5 - Math.random() * 10);
 
       await this.world.spawnTarget({
