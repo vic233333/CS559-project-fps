@@ -133,12 +133,13 @@ export default class InGameUI {
     const baseZ = 8; // In front of player spawn
 
     // Panel configurations: [label, delta, color]
+    // Order: large decrease, small decrease, display, small increase, large increase
     const configs = [
-      ["-0.0001", -0.0001, "#ff6666"],
-      ["-0.001", -0.001, "#ffaa66"],
+      ["-0.001", -0.001, "#ff6666"],
+      ["-0.0001", -0.0001, "#ffaa66"],
       ["SENS", 0, "#ffc800"], // Center display
-      ["+0.001", 0.001, "#66ff66"],
-      ["+0.0001", 0.0001, "#66ffaa"]
+      ["+0.0001", 0.0001, "#66ffaa"],
+      ["+0.001", 0.001, "#66ff66"]
     ];
 
     configs.forEach((cfg, i) => {
