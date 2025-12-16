@@ -154,7 +154,8 @@ export default class Robot extends Entity {
         // Ensure the initial pose is applied before we do any post-normalization.
         this.mixer.update(0);
       }
-      this._snapFeetToGround(root);
+      // Note: _normalizeAndScaleModel already positions the model with feet at Y=0
+      // Don't call _snapFeetToGround as it may interfere
       return;
     } catch (err) {
       console.warn(
@@ -227,30 +228,13 @@ export default class Robot extends Entity {
     box.getSize(size);
 
     console.log(`Robot model original bbox size: ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}`);
-    console.log(`Robot model original bbox: min=(${box.min.x.toFixed(2)}, ${box.min.y.toFixed(2)}, ${box.min.z.toFixed(2)}), max=(${box.max.x.toFixed(2)}, ${box.max.y.toFixed(2)}, ${box.max.z.toFixed(2)})`);
 
-    // The RobotExpressive model from Three.js is typically ~1.5m tall at native scale
-    // But some versions use different units (cm instead of m)
-    // If bbox height > 10, model is likely in centimeters or other non-meter units
-    let scaleFactor;
-    if (size.y > 100) {
-      // Model is in centimeters (e.g., 149 cm = 1.49m)
-      // Convert to meters first: size.y / 100
-      // Then scale to target height: targetHeight / (size.y / 100)
-      const heightInMeters = size.y / 100;
-      scaleFactor = targetHeight / heightInMeters;
-      console.log(`Model appears to be in cm (${size.y.toFixed(0)}cm = ${heightInMeters.toFixed(2)}m). Scale factor: ${scaleFactor.toFixed(4)}`);
-    } else if (size.y > 10) {
-      // Model might be in decimeters or other units
-      scaleFactor = targetHeight / (size.y / 10);
-      console.log(`Model in decimeters. Scale factor: ${scaleFactor.toFixed(4)}`);
-    } else if (size.y > 0.001) {
-      // Model is in meters
+    // Scale model so its height becomes targetHeight (1.75m)
+    // Regardless of what units the model uses, we want final height = targetHeight
+    let scaleFactor = 1.0;
+    if (size.y > 0.001) {
       scaleFactor = targetHeight / size.y;
-      console.log(`Model in meters. Scale factor: ${scaleFactor.toFixed(4)}`);
-    } else {
-      console.warn("Robot model has zero height, using default scale");
-      scaleFactor = 1.0;
+      console.log(`Robot scale factor: ${scaleFactor.toFixed(6)} (${size.y.toFixed(2)} -> ${targetHeight}m)`);
     }
 
     root.scale.setScalar(scaleFactor);
@@ -261,11 +245,12 @@ export default class Robot extends Entity {
     const scaledSize = new Vector3();
     scaledBox.getSize(scaledSize);
 
-    console.log(`Robot model scaled bbox size: ${scaledSize.x.toFixed(2)} x ${scaledSize.y.toFixed(2)} x ${scaledSize.z.toFixed(2)} meters`);
+    console.log(`Robot model scaled bbox: ${scaledSize.x.toFixed(2)} x ${scaledSize.y.toFixed(2)} x ${scaledSize.z.toFixed(2)} meters`);
+    console.log(`Robot scaled bbox min.y: ${scaledBox.min.y.toFixed(4)}`);
 
     // Move model so its feet (bottom of bounding box) are at Y = 0
-    root.position.y -= scaledBox.min.y;
-    console.log(`Robot positioned at Y=${root.position.y.toFixed(2)}`);
+    root.position.y = -scaledBox.min.y;
+    console.log(`Robot root.position.y set to: ${root.position.y.toFixed(4)}`);
   }
 
   _snapFeetToGround(root) {
