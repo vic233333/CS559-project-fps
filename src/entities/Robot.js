@@ -1,10 +1,11 @@
-import { Vector3, Group, Color, Box3, Matrix4, BoxGeometry, SphereGeometry, CylinderGeometry, MeshStandardMaterial, Mesh, AnimationMixer } from "three";
+import { Vector3, Group, Color, Box3, BoxGeometry, SphereGeometry, CylinderGeometry, MeshStandardMaterial, Mesh, AnimationMixer, LoopOnce } from "three";
 import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
 import Entity from "../core/Entity.js";
 import * as CANNON from "cannon-es";
 import Debris from "./Debris.js";
 
 const ROBOT_MODEL_URL = `${import.meta.env.BASE_URL}assets/models/RobotExpressive/RobotExpressive.glb`;
+const ROBOT_FOOT_SOLE_OFFSET = 0.08; // Approx. ankle -> sole distance in meters
 
 // Robot target with head/body/legs hitboxes and armor system
 export default class Robot extends Entity {
@@ -69,6 +70,18 @@ export default class Robot extends Entity {
     this.actions = {};
     this.activeAction = null;
     this.activeActionName = null;
+
+    // Death animation / cleanup
+    this.dying = false;
+    this.deathTimer = 0;
+    this.deathDuration = 0;
+    this.deathPosition = new Vector3();
+    this.updateWhileDead = false;
+    this.pendingRemoval = false;
+
+    // Hit flash state (per-robot materials are cloned)
+    this._flashBaseline = new Map(); // material.uuid -> { emissive, emissiveIntensity, color }
+    this._flashTimeout = null;
   }
 
   async build(scene, world) {
@@ -120,6 +133,7 @@ export default class Robot extends Entity {
       if (!gltf) throw lastErr || new Error("Failed to load robot GLTF");
 
       const root = SkeletonUtils.clone(gltf.scene);
+      this._cloneModelMaterials(root);
 
       this._normalizeAndScaleModel(root);
 
@@ -136,6 +150,11 @@ export default class Robot extends Entity {
 
       this._setupAnimations(gltf.animations || []);
       this._setAnimation(this.moving ? "Walking" : "Idle", true);
+      if (this.mixer) {
+        // Ensure the initial pose is applied before we do any post-normalization.
+        this.mixer.update(0);
+      }
+      this._snapFeetToGround(root);
       return;
     } catch (err) {
       console.warn(
@@ -145,6 +164,17 @@ export default class Robot extends Entity {
       );
       this._createFallbackRobotMesh();
     }
+  }
+
+  _cloneModelMaterials(root) {
+    root.traverse((child) => {
+      if (!child.isMesh || !child.material) return;
+      if (Array.isArray(child.material)) {
+        child.material = child.material.map((m) => (m ? m.clone() : m));
+      } else {
+        child.material = child.material.clone();
+      }
+    });
   }
 
   _setupAnimations(clips) {
@@ -187,52 +217,105 @@ export default class Robot extends Entity {
   }
 
   _normalizeAndScaleModel(root) {
-    // 1) Put feet on ground (minY -> 0).
+    const desiredHeadY = this.robotHeight - this.headRadius; // ~1.6m
+    root.updateWorldMatrix(true, true);
+
+    let skinnedMesh = null;
+    root.traverse((obj) => {
+      if (!skinnedMesh && obj.isSkinnedMesh) skinnedMesh = obj;
+    });
+    const bones = skinnedMesh?.skeleton?.bones || null;
+
+    const findBone = (name, fallbackRegex = null) => {
+      if (!bones) return null;
+      const exact = bones.find((b) => b.name === name);
+      if (exact) return exact;
+      if (!fallbackRegex) return null;
+      return (
+        bones.find((b) => fallbackRegex.test(b.name) && !/(end|tip)$/i.test(b.name)) ||
+        bones.find((b) => fallbackRegex.test(b.name)) ||
+        null
+      );
+    };
+
+    const headBone = findBone("Head", /head$/i);
+    const footLBone = findBone("Foot.L", /^foot\.l$/i);
+    const footRBone = findBone("Foot.R", /^foot\.r$/i);
+    const footBones = [footLBone, footRBone].filter(Boolean);
+
+    const alignFeet = () => {
+      if (footBones.length === 0) return false;
+      root.updateWorldMatrix(true, true);
+      let minFootY = Number.POSITIVE_INFINITY;
+      const tmp = new Vector3();
+      for (const b of footBones) {
+        b.getWorldPosition(tmp);
+        if (tmp.y < minFootY) minFootY = tmp.y;
+      }
+      if (!Number.isFinite(minFootY)) return false;
+      const groundY = minFootY - ROBOT_FOOT_SOLE_OFFSET;
+      root.position.y -= groundY;
+      return true;
+    };
+
+    if (headBone && footBones.length > 0) {
+      // Align feet first, then scale based on head height, then re-align feet.
+      alignFeet();
+      root.updateWorldMatrix(true, true);
+      const headPos = new Vector3();
+      headBone.getWorldPosition(headPos);
+      if (headPos.y > 0.001) {
+        const scale = desiredHeadY / headPos.y;
+        root.scale.setScalar(scale);
+      }
+      alignFeet();
+      return;
+    }
+
+    // Fallback: use bounding box based alignment + overall height scaling.
     root.updateWorldMatrix(true, true);
     const box = new Box3().setFromObject(root);
     if (Number.isFinite(box.min.y) && Number.isFinite(box.max.y)) {
       root.position.y -= box.min.y;
     }
-
-    // 2) Scale so that the model head aligns with player camera height.
-    // Prefer a head bone if present; otherwise fall back to scaling by overall height.
-    const desiredHeadY = this.robotHeight - this.headRadius; // ~1.6m
-    root.updateWorldMatrix(true, true);
-
-    const headBones = [];
-    root.traverse((obj) => {
-      if (obj.isBone && /head/i.test(obj.name)) headBones.push(obj);
-    });
-
-    const head =
-      headBones.find((b) => /^head$/i.test(b.name)) ||
-      headBones.find((b) => /head$/i.test(b.name) && !/(end|tip)/i.test(b.name)) ||
-      headBones.find((b) => !/(end|tip)/i.test(b.name)) ||
-      headBones[0] ||
-      null;
-
-    let scale = 1;
-    if (head) {
-      const headPos = new Vector3();
-      head.getWorldPosition(headPos);
-      if (headPos.y > 0.001) {
-        scale = desiredHeadY / headPos.y;
-      }
-    } else {
-      const size = new Vector3();
-      box.getSize(size);
-      if (size.y > 0.001) {
-        scale = this.robotHeight / size.y;
-      }
+    const size = new Vector3();
+    box.getSize(size);
+    if (size.y > 0.001) {
+      root.scale.setScalar(this.robotHeight / size.y);
     }
-
-    root.scale.setScalar(scale);
-
-    // Re-normalize feet after scaling.
     root.updateWorldMatrix(true, true);
     const box2 = new Box3().setFromObject(root);
     if (Number.isFinite(box2.min.y) && Number.isFinite(box2.max.y)) {
       root.position.y -= box2.min.y;
+    }
+  }
+
+  _snapFeetToGround(root) {
+    if (!root) return;
+    let skinnedMesh = null;
+    root.traverse((obj) => {
+      if (!skinnedMesh && obj.isSkinnedMesh) skinnedMesh = obj;
+    });
+    const bones = skinnedMesh?.skeleton?.bones || null;
+    if (!bones) return;
+
+    const footLBone = bones.find((b) => b.name === "Foot.L") || null;
+    const footRBone = bones.find((b) => b.name === "Foot.R") || null;
+    const footBones = [footLBone, footRBone].filter(Boolean);
+    if (footBones.length === 0) return;
+
+    root.updateWorldMatrix(true, true);
+    let minFootY = Number.POSITIVE_INFINITY;
+    const tmp = new Vector3();
+    for (const b of footBones) {
+      b.getWorldPosition(tmp);
+      if (tmp.y < minFootY) minFootY = tmp.y;
+    }
+    if (!Number.isFinite(minFootY)) return;
+
+    const groundY = minFootY - ROBOT_FOOT_SOLE_OFFSET;
+    if (Math.abs(groundY) > 0.001) {
+      root.position.y -= groundY;
     }
   }
 
@@ -429,8 +512,14 @@ export default class Robot extends Entity {
   }
 
   prePhysics(dt) {
-    if (this.mixer) {
-      this.mixer.update(dt);
+    if (this.mixer) this.mixer.update(dt);
+
+    if (this.dying) {
+      this.deathTimer += dt;
+      if (this.deathTimer >= this.deathDuration) {
+        this._finalizeDeath();
+      }
+      return;
     }
 
     // Animation state selection
@@ -504,8 +593,7 @@ export default class Robot extends Entity {
     this._flashHit(bodyPart);
 
     if (this.health <= 0) {
-      this.alive = false;
-      this._die();
+      this._beginDeath();
       return { killed: true, damage: actualDamage, bodyPart };
     }
 
@@ -528,41 +616,175 @@ export default class Robot extends Entity {
   }
 
   _flashHit(bodyPart) {
-    // Flash the hit body part red briefly
+    const flash = {
+      head: { color: 0xff3333, intensity: 2.0, durationMs: 120 },
+      body: { color: 0xff0000, intensity: 1.6, durationMs: 100 },
+      legs: { color: 0xcc0033, intensity: 1.4, durationMs: 100 }
+    }[bodyPart] || { color: 0xff0000, intensity: 1.6, durationMs: 100 };
+
+    if (this.modelRoot) {
+      this._flashModel(flash.color, flash.intensity, flash.durationMs);
+      return;
+    }
+
+    // Fallback: flash the hit body part red briefly
+    const targetColor = new Color(flash.color);
     this.object3D.traverse((child) => {
-      if (child.isMesh && child.userData.bodyPart === bodyPart) {
-        const originalEmissive = child.material.emissive.clone();
-        child.material.emissive.set(0xff0000);
-        setTimeout(() => {
-          if (child.material) {
-            child.material.emissive.copy(originalEmissive);
-          }
-        }, 100);
-      }
+      if (!child.isMesh) return;
+      if (child.userData.bodyPart !== bodyPart) return;
+      if (!child.material || !child.material.emissive) return;
+
+      const originalEmissive = child.material.emissive.clone();
+      const originalIntensity = child.material.emissiveIntensity ?? 1;
+      child.material.emissive.copy(targetColor);
+      child.material.emissiveIntensity = flash.intensity;
+      setTimeout(() => {
+        if (!child.material) return;
+        if (child.material.emissive) child.material.emissive.copy(originalEmissive);
+        if (child.material.emissiveIntensity !== undefined) {
+          child.material.emissiveIntensity = originalIntensity;
+        }
+      }, flash.durationMs);
     });
   }
 
   _flashArmorHit() {
+    if (this.modelRoot) {
+      this._flashModel(0x00ffff, 1.6, 120);
+      return;
+    }
+
     // Flash armor blue briefly
     this.object3D.traverse((child) => {
-      if (child.isMesh && child.material.color.getHex() === this.armorColor) {
-        const originalEmissive = child.material.emissive.clone();
-        child.material.emissive.set(0x00ffff);
-        setTimeout(() => {
-          if (child.material) {
-            child.material.emissive.copy(originalEmissive);
-          }
-        }, 100);
-      }
+      if (!child.isMesh) return;
+      if (!child.material?.color) return;
+      if (child.material.color.getHex() !== this.armorColor) return;
+      if (!child.material.emissive) return;
+
+      const originalEmissive = child.material.emissive.clone();
+      const originalIntensity = child.material.emissiveIntensity ?? 1;
+      child.material.emissive.set(0x00ffff);
+      child.material.emissiveIntensity = Math.max(originalIntensity, 1.6);
+      setTimeout(() => {
+        if (!child.material) return;
+        if (child.material.emissive) child.material.emissive.copy(originalEmissive);
+        if (child.material.emissiveIntensity !== undefined) {
+          child.material.emissiveIntensity = originalIntensity;
+        }
+      }, 100);
     });
   }
 
-  _die() {
-    // Remove body and mesh from world
-    if (this.body) {
-      this.world.physicsWorld.removeBody(this.body);
+  _flashModel(color, intensity = 1.6, durationMs = 100) {
+    if (!this.modelRoot) return;
+
+    if (this._flashTimeout) {
+      clearTimeout(this._flashTimeout);
+      this._flashTimeout = null;
     }
-    this.world.remove(this);
+
+    const flashColor = new Color(color);
+    const touched = new Set();
+
+    this.modelRoot.traverse((child) => {
+      if (!child.isMesh || !child.material) return;
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      for (const mat of materials) {
+        if (!mat || touched.has(mat.uuid)) continue;
+        touched.add(mat.uuid);
+
+        if (!this._flashBaseline.has(mat.uuid)) {
+          this._flashBaseline.set(mat.uuid, {
+            emissive: mat.emissive ? mat.emissive.clone() : null,
+            emissiveIntensity: mat.emissiveIntensity ?? null,
+            color: mat.color ? mat.color.clone() : null
+          });
+        }
+
+        if (mat.emissive) {
+          mat.emissive.copy(flashColor);
+          if (mat.emissiveIntensity !== undefined && mat.emissiveIntensity !== null) {
+            mat.emissiveIntensity = Math.max(mat.emissiveIntensity, intensity);
+          }
+        } else if (mat.color) {
+          mat.color.lerp(flashColor, 0.6);
+        }
+      }
+    });
+
+    this._flashTimeout = setTimeout(() => {
+      for (const uuid of touched) {
+        const base = this._flashBaseline.get(uuid);
+        if (!base) continue;
+
+        this.modelRoot.traverse((child) => {
+          if (!child.isMesh || !child.material) return;
+          const materials = Array.isArray(child.material) ? child.material : [child.material];
+          for (const mat of materials) {
+            if (!mat || mat.uuid !== uuid) continue;
+            if (base.emissive && mat.emissive) mat.emissive.copy(base.emissive);
+            if (base.emissiveIntensity !== null && mat.emissiveIntensity !== undefined) {
+              mat.emissiveIntensity = base.emissiveIntensity;
+            }
+            if (base.color && mat.color) mat.color.copy(base.color);
+          }
+        });
+      }
+      this._flashTimeout = null;
+    }, durationMs);
+  }
+
+  _beginDeath() {
+    if (this.dying) return;
+    this.alive = false;
+    this.dying = true;
+    this.updateWhileDead = true;
+    this.deathTimer = 0;
+    this.moving = false;
+
+    // Stop physics and lock current position.
+    if (this.body) {
+      this.object3D.position.copy(this.body.position);
+      this.deathPosition.copy(this.body.position);
+      this.world.physicsWorld.removeBody(this.body);
+      this.body = null;
+    } else {
+      this.deathPosition.copy(this.object3D.position);
+    }
+
+    // Remove hitboxes so the dead body can't be shot again.
+    if (this.hitboxes && this.world?.hittableGroup) {
+      for (const key in this.hitboxes) {
+        if (this.hitboxes[key]) {
+          this.world.hittableGroup.remove(this.hitboxes[key]);
+        }
+      }
+    }
+
+    // Play the model's Death animation if present.
+    const deathAction = this.actions?.Death || this.actions?.death || null;
+    if (deathAction) {
+      if (this.activeAction && this.activeAction !== deathAction) {
+        this.activeAction.stop();
+      }
+      deathAction.reset();
+      deathAction.enabled = true;
+      deathAction.setLoop(LoopOnce, 1);
+      deathAction.clampWhenFinished = true;
+      deathAction.timeScale = 1;
+      deathAction.play();
+      this.activeAction = deathAction;
+      this.activeActionName = "Death";
+      this.deathDuration = (deathAction.getClip()?.duration || 1.2) + 0.15;
+    } else {
+      this.deathDuration = 0.4;
+    }
+  }
+
+  _finalizeDeath() {
+    if (!this.dying) return;
+    this.dying = false;
+    this.updateWhileDead = false;
 
     // Create shatter debris
     const numDebris = 15;
@@ -580,9 +802,9 @@ export default class Robot extends Entity {
       const debris = new Debris({
         world: this.world,
         initialPosition: new CANNON.Vec3(
-          this.body.position.x + (Math.random() - 0.5) * 0.5,
-          this.body.position.y + Math.random() * this.robotHeight,
-          this.body.position.z + (Math.random() - 0.5) * 0.5
+          this.deathPosition.x + (Math.random() - 0.5) * 0.5,
+          this.deathPosition.y + Math.random() * this.robotHeight,
+          this.deathPosition.z + (Math.random() - 0.5) * 0.5
         ),
         initialVelocity: randomDir.scale(explosionStrength * (Math.random() * 0.75 + 0.25)),
         size: size,
@@ -591,6 +813,8 @@ export default class Robot extends Entity {
       });
       this.world.debris.push(debris);
     }
+
+    this.pendingRemoval = true;
   }
 
   postPhysics() {

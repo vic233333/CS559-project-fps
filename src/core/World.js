@@ -253,7 +253,9 @@ export default class World {
     // Apply input -> physics velocities
     this.player.update(dt, this);
     for (const entity of this.entities) {
-      if (entity.alive && entity.prePhysics) entity.prePhysics(dt, this);
+      if ((entity.alive || entity.updateWhileDead) && entity.prePhysics) {
+        entity.prePhysics(dt, this);
+      }
     }
 
     // Step physics
@@ -267,7 +269,9 @@ export default class World {
     ];
     this.player.syncFromPhysics();
     for (const entity of this.entities) {
-      if (entity.alive && entity.postPhysics) entity.postPhysics(dt, this);
+      if ((entity.alive || entity.updateWhileDead) && entity.postPhysics) {
+        entity.postPhysics(dt, this);
+      }
     }
 
     // Update and clean up debris
@@ -277,6 +281,13 @@ export default class World {
       if (d.isDead()) {
         d.destroy();
         this.debris.splice(i, 1);
+      }
+    }
+
+    // Remove entities that finished delayed cleanup (e.g. death animations)
+    for (const entity of [...this.entities]) {
+      if (entity.pendingRemoval) {
+        this.remove(entity);
       }
     }
 
