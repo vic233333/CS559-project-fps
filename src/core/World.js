@@ -21,6 +21,8 @@ export default class World {
     this.assetManager = assetManager;
     this.gameplayConfig = gameplayConfig;
     this.renderProfile = null;
+    this.robotModelScale = 1;
+    this.robotModelYOffset = 0;
 
     this.scene = new Scene();
     this.renderer = new WebGLRenderer({
@@ -68,6 +70,19 @@ export default class World {
     });
 
     window.addEventListener("resize", () => this.handleResize());
+  }
+
+  setRobotModelTuning(scale, yOffset, { applyToExisting = true } = {}) {
+    if (Number.isFinite(scale)) this.robotModelScale = scale;
+    if (Number.isFinite(yOffset)) this.robotModelYOffset = yOffset;
+
+    if (!applyToExisting) return;
+    for (const entity of this.targets) {
+      if (!entity || !entity.alive) continue;
+      if (entity instanceof Robot && typeof entity.setModelTuning === "function") {
+        entity.setModelTuning(this.robotModelScale, this.robotModelYOffset);
+      }
+    }
   }
 
   setInputManager(input) {
@@ -152,7 +167,9 @@ export default class World {
         moving,
         speed,
         position: finalPosition,
-        hasArmor
+        hasArmor,
+        modelScale: this.robotModelScale,
+        modelYOffset: this.robotModelYOffset
       });
       await entity.build(this.scene, this);
 

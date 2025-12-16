@@ -2,6 +2,8 @@ import { GAMEPLAY_CONFIG, UI_DEFAULTS } from "../config/GameplayConfig.js";
 
 export default class UIManager {
   constructor() {
+    this.listeners = new Map();
+
     this.menu = document.getElementById("menu-screen");
     this.settings = document.getElementById("settings-screen");
     this.pause = document.getElementById("pause-screen");
@@ -38,6 +40,12 @@ export default class UIManager {
     this.robotArmorCheckbox = document.getElementById("robot-armor");
     this.robotMovingCheckbox = document.getElementById("robot-moving");
     this.robotSettings = document.querySelector(".robot-settings");
+    this.robotScaleSlider = document.getElementById("robot-scale-slider");
+    this.robotScaleInput = document.getElementById("robot-scale-input");
+    this.robotScaleValue = document.getElementById("robot-scale-value");
+    this.robotYOffsetSlider = document.getElementById("robot-yoffset-slider");
+    this.robotYOffsetInput = document.getElementById("robot-yoffset-input");
+    this.robotYOffsetValue = document.getElementById("robot-yoffset-value");
 
     // Game settings state
     this.gameSettings = {
@@ -51,11 +59,25 @@ export default class UIManager {
       distributeAngle: UI_DEFAULTS.distributeAngle,
       targetType: "geometric",
       robotArmor: false,
-      robotMoving: true
+      robotMoving: true,
+      robotModelScale: UI_DEFAULTS.robotModelScale,
+      robotModelYOffset: UI_DEFAULTS.robotModelYOffset
     };
 
     this._initDefaultWaves();
     this._bindSettingsEvents();
+  }
+
+  on(event, cb) {
+    if (!this.listeners.has(event)) this.listeners.set(event, []);
+    this.listeners.get(event).push(cb);
+  }
+
+  emit(event, payload) {
+    if (!this.listeners.has(event)) return;
+    for (const cb of this.listeners.get(event)) {
+      cb(payload);
+    }
   }
 
   _initDefaultWaves() {
@@ -147,6 +169,28 @@ export default class UIManager {
         this.gameSettings.robotMoving = e.target.checked;
       });
     }
+
+    // Robot model tuning
+    if (this.robotScaleSlider) {
+      this.robotScaleSlider.addEventListener("input", (e) => {
+        this._setRobotModelScale(parseFloat(e.target.value));
+      });
+    }
+    if (this.robotScaleInput) {
+      this.robotScaleInput.addEventListener("input", (e) => {
+        this._setRobotModelScale(parseFloat(e.target.value));
+      });
+    }
+    if (this.robotYOffsetSlider) {
+      this.robotYOffsetSlider.addEventListener("input", (e) => {
+        this._setRobotModelYOffset(parseFloat(e.target.value));
+      });
+    }
+    if (this.robotYOffsetInput) {
+      this.robotYOffsetInput.addEventListener("input", (e) => {
+        this._setRobotModelYOffset(parseFloat(e.target.value));
+      });
+    }
   }
 
   _toggleTargetTypeSettings() {
@@ -182,6 +226,62 @@ export default class UIManager {
 
     if (this.sensitivityValue) {
       this.sensitivityValue.textContent = clamped.toFixed(4);
+    }
+  }
+
+  _getRobotScaleLimits() {
+    const min = parseFloat(this.robotScaleSlider?.min ?? this.robotScaleInput?.min ?? "0.001");
+    const max = parseFloat(this.robotScaleSlider?.max ?? this.robotScaleInput?.max ?? "5");
+    return {
+      min: Number.isFinite(min) ? min : 0.001,
+      max: Number.isFinite(max) ? max : 5
+    };
+  }
+
+  _setRobotModelScale(value, { emit = true } = {}) {
+    if (Number.isNaN(value)) return;
+    const { min, max } = this._getRobotScaleLimits();
+    const clamped = Math.min(max, Math.max(min, value));
+
+    this.gameSettings.robotModelScale = clamped;
+
+    if (this.robotScaleSlider) this.robotScaleSlider.value = clamped;
+    if (this.robotScaleInput) this.robotScaleInput.value = clamped.toFixed(3);
+    if (this.robotScaleValue) this.robotScaleValue.textContent = clamped.toFixed(3);
+
+    if (emit) {
+      this.emit("robotModelTuning", {
+        scale: this.gameSettings.robotModelScale,
+        yOffset: this.gameSettings.robotModelYOffset
+      });
+    }
+  }
+
+  _getRobotYOffsetLimits() {
+    const min = parseFloat(this.robotYOffsetSlider?.min ?? this.robotYOffsetInput?.min ?? "-2");
+    const max = parseFloat(this.robotYOffsetSlider?.max ?? this.robotYOffsetInput?.max ?? "2");
+    return {
+      min: Number.isFinite(min) ? min : -2,
+      max: Number.isFinite(max) ? max : 2
+    };
+  }
+
+  _setRobotModelYOffset(value, { emit = true } = {}) {
+    if (Number.isNaN(value)) return;
+    const { min, max } = this._getRobotYOffsetLimits();
+    const clamped = Math.min(max, Math.max(min, value));
+
+    this.gameSettings.robotModelYOffset = clamped;
+
+    if (this.robotYOffsetSlider) this.robotYOffsetSlider.value = clamped;
+    if (this.robotYOffsetInput) this.robotYOffsetInput.value = clamped.toFixed(2);
+    if (this.robotYOffsetValue) this.robotYOffsetValue.textContent = clamped.toFixed(2);
+
+    if (emit) {
+      this.emit("robotModelTuning", {
+        scale: this.gameSettings.robotModelScale,
+        yOffset: this.gameSettings.robotModelYOffset
+      });
     }
   }
 
@@ -314,6 +414,8 @@ export default class UIManager {
     if (this.robotMovingCheckbox) {
       this.robotMovingCheckbox.checked = this.gameSettings.robotMoving;
     }
+    this._setRobotModelScale(this.gameSettings.robotModelScale, { emit: false });
+    this._setRobotModelYOffset(this.gameSettings.robotModelYOffset, { emit: false });
     this._toggleTargetTypeSettings();
   }
 

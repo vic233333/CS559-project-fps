@@ -10,7 +10,7 @@ const ROBOT_HEAD_TARGET_Y = 1.6; // Aim head center at player eye height
 
 // Robot target with head/body/legs hitboxes and armor system
 export default class Robot extends Entity {
-  constructor({ modeConfig, renderProfile, moving, speed, position, hasArmor = false }) {
+  constructor({ modeConfig, renderProfile, moving, speed, position, hasArmor = false, modelScale = 1, modelYOffset = 0 }) {
     super(new Group());
     this.modeConfig = modeConfig;
     this.renderProfile = renderProfile;
@@ -85,6 +85,14 @@ export default class Robot extends Entity {
 
     // Derived from model (when glTF is used) to keep hitboxes/physics in sync with asset scale.
     this._hitboxLayout = null; // { headCenterY, headRadius, bodyCenterY, bodySize, legsCenterY, legsSize, neckY, hipsY }
+
+    // Manual tuning knobs (applied on top of normalization).
+    this.modelScale = Number.isFinite(modelScale) ? modelScale : 1;
+    this.modelYOffset = Number.isFinite(modelYOffset) ? modelYOffset : 0;
+    this._baseModelScale = new Vector3(1, 1, 1);
+    this._baseModelPosition = new Vector3();
+    this._baseRobotHeight = this.robotHeight;
+    this._baseRadius = this.radius;
   }
 
   async build(scene, world) {
@@ -100,9 +108,10 @@ export default class Robot extends Entity {
     this._createHitboxes();
 
     // Physics body (simple cylinder for movement)
+    const physicsRadius = 0.3 * this.modelScale;
     this.body = new CANNON.Body({
       mass: 0,
-      shape: new CANNON.Cylinder(0.3, 0.3, this.robotHeight, 8),
+      shape: new CANNON.Cylinder(physicsRadius, physicsRadius, this.robotHeight, 8),
       position: new CANNON.Vec3(this.position.x, this.position.y, this.position.z)
     });
     this.body.isDynamicCollider = true;
@@ -139,6 +148,9 @@ export default class Robot extends Entity {
       this._cloneModelMaterials(root);
 
       this._normalizeAndScaleModel(root);
+      this._baseModelScale.copy(root.scale);
+      this._baseModelPosition.copy(root.position);
+      this._tagModelMeshesForHitTesting(root);
 
       // Shadows
       root.traverse((child) => {
@@ -164,6 +176,11 @@ export default class Robot extends Entity {
         // Keep the physics proxy height roughly consistent with the visible model.
         this.robotHeight = Math.max(1.2, this._hitboxLayout.headCenterY + this._hitboxLayout.headRadius * 1.15);
       }
+      this._baseRobotHeight = this.robotHeight;
+      this._baseRadius = this.radius;
+
+      // Apply user tuning (scale/height) on top of the normalized model.
+      this.setModelTuning(this.modelScale, this.modelYOffset);
 
       // Note: _normalizeAndScaleModel already positions the model with feet at Y=0
       // Don't call _snapFeetToGround as it may interfere
@@ -176,6 +193,19 @@ export default class Robot extends Entity {
       );
       this._createFallbackRobotMesh();
     }
+  }
+
+  _tagModelMeshesForHitTesting(root) {
+    if (!root) return;
+    root.traverse((child) => {
+      if (!child.isMesh) return;
+      const name = (child.name || "").toLowerCase();
+      let bodyPart = "body";
+      if (name.includes("head")) bodyPart = "head";
+      else if (name.includes("leg") || name.includes("foot")) bodyPart = "legs";
+      child.userData.entity = this;
+      child.userData.bodyPart = bodyPart;
+    });
   }
 
   _cloneModelMaterials(root) {
@@ -394,8 +424,7 @@ export default class Robot extends Entity {
       footR.getWorldPosition(tmp);
       minFootY = Math.min(minFootY, tmp.y);
     }
-    // Model root is snapped so soles are at y=0 (animations may lift feet briefly).
-    const groundY = 0;
+    const groundY = Number.isFinite(minFootY) ? (minFootY - ROBOT_FOOT_SOLE_OFFSET) : 0;
 
     // Width heuristics from rig measurements
     let shoulderWidth = 0;
@@ -439,6 +468,49 @@ export default class Robot extends Entity {
       hipsY,
       groundY
     };
+  }
+
+  setModelTuning(scale, yOffset) {
+    const nextScale = Number.isFinite(scale) ? scale : this.modelScale;
+    const nextYOffset = Number.isFinite(yOffset) ? yOffset : this.modelYOffset;
+
+    this.modelScale = Math.max(0.001, nextScale);
+    this.modelYOffset = nextYOffset;
+
+    // Keep derived dimensions consistent for physics + overlap checks.
+    this.robotHeight = this._baseRobotHeight * this.modelScale;
+    this.radius = this._baseRadius * this.modelScale;
+
+    // Apply to the visual model.
+    if (this.modelRoot) {
+      this.modelRoot.scale.copy(this._baseModelScale).multiplyScalar(this.modelScale);
+      // Scale the base position too so feet stay grounded when scaling.
+      this.modelRoot.position.copy(this._baseModelPosition).multiplyScalar(this.modelScale);
+      this.modelRoot.position.y += this.modelYOffset;
+      this.modelRoot.updateWorldMatrix(true, true);
+    } else {
+      // Fallback meshes live directly under object3D.
+      this.object3D.scale.setScalar(this.modelScale);
+    }
+
+    // Apply to hitboxes (if already created).
+    for (const hitbox of Object.values(this.hitboxes)) {
+      if (!hitbox) continue;
+      hitbox.scale.setScalar(this.modelScale);
+    }
+    this._syncHitboxPositions();
+
+    this._refreshPhysicsShape();
+  }
+
+  _refreshPhysicsShape() {
+    if (!this.body) return;
+    const physicsRadius = 0.3 * this.modelScale;
+    const shapes = [...this.body.shapes];
+    for (const s of shapes) this.body.removeShape(s);
+    this.body.addShape(new CANNON.Cylinder(physicsRadius, physicsRadius, this.robotHeight, 8));
+    this.body.updateBoundingRadius();
+    this.body.aabbNeedsUpdate = true;
   }
 
   _createFallbackRobotMesh() {
@@ -626,12 +698,14 @@ export default class Robot extends Entity {
     this.hitboxes.head = new Mesh(headHitboxGeo, hitboxMat.clone());
     this.hitboxes.head.userData.entity = this;
     this.hitboxes.head.userData.bodyPart = 'head';
+    this.hitboxes.head.scale.setScalar(this.modelScale);
 
     // Body hitbox
     const bodyHitboxGeo = new BoxGeometry(bodySize.x, bodySize.y, bodySize.z);
     this.hitboxes.body = new Mesh(bodyHitboxGeo, hitboxMat.clone());
     this.hitboxes.body.userData.entity = this;
     this.hitboxes.body.userData.bodyPart = 'body';
+    this.hitboxes.body.scale.setScalar(this.modelScale);
 
     // Legs hitbox (combined)
     if (legsSize) {
@@ -649,6 +723,7 @@ export default class Robot extends Entity {
     }
     this.hitboxes.legs.userData.entity = this;
     this.hitboxes.legs.userData.bodyPart = 'legs';
+    this.hitboxes.legs.scale.setScalar(this.modelScale);
 
     this._syncHitboxPositions();
   }
@@ -658,19 +733,23 @@ export default class Robot extends Entity {
 
     const pos = this.object3D.position;
     const layout = this._hitboxLayout;
+    const scale = this.modelScale;
+    const yOffset = this.modelYOffset;
 
     // Head
-    const headY = layout?.headCenterY ?? ROBOT_HEAD_TARGET_Y;
+    const headY = (layout?.headCenterY ?? ROBOT_HEAD_TARGET_Y) * scale + yOffset;
     this.hitboxes.head.position.set(pos.x, pos.y + headY, pos.z);
     this.hitboxes.head.quaternion.copy(this.object3D.quaternion);
 
     // Body
-    const bodyY = layout?.bodyCenterY ?? (headY - this.headRadius - 0.1 - this.bodyHeight / 2);
+    const bodyBaseY = layout?.bodyCenterY ?? (ROBOT_HEAD_TARGET_Y - this.headRadius - 0.1 - this.bodyHeight / 2);
+    const bodyY = bodyBaseY * scale + yOffset;
     this.hitboxes.body.position.set(pos.x, pos.y + bodyY, pos.z);
     this.hitboxes.body.quaternion.copy(this.object3D.quaternion);
 
     // Legs
-    const legsY = layout?.legsCenterY ?? ((headY - this.headRadius - 0.1 - this.bodyHeight - 0.1) / 2);
+    const legsBaseY = layout?.legsCenterY ?? ((ROBOT_HEAD_TARGET_Y - this.headRadius - 0.1 - this.bodyHeight - 0.1) / 2);
+    const legsY = legsBaseY * scale + yOffset;
     this.hitboxes.legs.position.set(pos.x, pos.y + legsY, pos.z);
     this.hitboxes.legs.quaternion.copy(this.object3D.quaternion);
   }
@@ -768,8 +847,13 @@ export default class Robot extends Entity {
     const localY = hitPoint.y - this.object3D.position.y;
 
     const layout = this._hitboxLayout;
-    const neckY = layout?.neckY ?? (ROBOT_HEAD_TARGET_Y - this.headRadius - 0.1);
-    const hipsY = layout?.hipsY ?? (neckY - this.bodyHeight - 0.1);
+    const scale = this.modelScale;
+    const yOffset = this.modelYOffset;
+
+    const neckBaseY = layout?.neckY ?? (ROBOT_HEAD_TARGET_Y - this.headRadius - 0.1);
+    const hipsBaseY = layout?.hipsY ?? (neckBaseY - this.bodyHeight - 0.1);
+    const neckY = neckBaseY * scale + yOffset;
+    const hipsY = hipsBaseY * scale + yOffset;
 
     // Head zone (from neck top upward)
     if (localY > neckY) {

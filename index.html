@@ -122,6 +122,18 @@
               Robots Move
             </label>
           </div>
+          <div class="setting-row">
+            <label>Model Scale:</label>
+            <input type="range" id="robot-scale-slider" min="0.001" max="50" step="0.001" value="10">
+            <input type="number" id="robot-scale-input" min="0.001" max="50" step="0.001" value="10">
+            <span id="robot-scale-value">1.000</span>
+          </div>
+          <div class="setting-row">
+            <label>Model Y Offset:</label>
+            <input type="range" id="robot-yoffset-slider" min="-20" max="20" step="0.01" value="0">
+            <input type="number" id="robot-yoffset-input" min="-20" max="20" step="0.01" value="0">
+            <span id="robot-yoffset-value">0.00</span>
+          </div>
           <div class="damage-info">
             <p>Damage: Head=160 | Body=40 | Legs=34</p>
             <p>Health: 100 HP</p>
@@ -180,6 +192,7 @@
         <p class="desc">Press ESC to pause the game at any time.</p>
         <div class="options">
           <button id="resume-btn">Resume Game</button>
+          <button id="pause-settings-btn">Settings</button>
           <button id="quit-btn">Quit to Menu</button>
         </div>
       </div>

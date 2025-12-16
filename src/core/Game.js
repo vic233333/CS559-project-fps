@@ -132,13 +132,17 @@ export default class Game {
     if (settingsSaveBtn) {
       settingsSaveBtn.addEventListener("click", () => {
         this.applySettings();
-        this.ui.showMenu();
+        if (this.state.is("paused")) this.ui.showPause();
+        else this.ui.showMenu();
       });
     }
 
     const settingsCancelBtn = document.getElementById("settings-cancel-btn");
     if (settingsCancelBtn) {
-      settingsCancelBtn.addEventListener("click", () => this.ui.showMenu());
+      settingsCancelBtn.addEventListener("click", () => {
+        if (this.state.is("paused")) this.ui.showPause();
+        else this.ui.showMenu();
+      });
     }
 
     // Pause buttons
@@ -147,10 +151,20 @@ export default class Game {
       resumeBtn.addEventListener("click", () => this.resumeGame());
     }
 
+    const pauseSettingsBtn = document.getElementById("pause-settings-btn");
+    if (pauseSettingsBtn) {
+      pauseSettingsBtn.addEventListener("click", () => this.ui.showSettings());
+    }
+
     const quitBtn = document.getElementById("quit-btn");
     if (quitBtn) {
       quitBtn.addEventListener("click", () => this.quitToMenu());
     }
+
+    // Live robot model tuning (applies immediately without page reload)
+    this.ui.on("robotModelTuning", ({ scale, yOffset }) => {
+      this.world.setRobotModelTuning(scale, yOffset, { applyToExisting: true });
+    });
   }
 
   _bindPauseEvents() {
@@ -196,6 +210,9 @@ export default class Game {
     this.targetType = settings.targetType || "geometric";
     this.robotArmor = settings.robotArmor || false;
     this.robotMoving = settings.robotMoving !== false;
+
+    // Apply robot model tuning (used for new spawns and live-updated for existing robots)
+    this.world.setRobotModelTuning(settings.robotModelScale, settings.robotModelYOffset, { applyToExisting: true });
 
     // Update waveManager with new config
     this.waveManager.config = this.gameplayConfig;
@@ -471,8 +488,8 @@ export default class Game {
       }
     }
 
-    // Check for hits
-    const hits = this.raycaster.intersectObjects(this.world.hittableGroup.children, true);
+    // Check for hits (use rendered target meshes directly)
+    const hits = this.raycaster.intersectObjects(this.world.targetGroup.children, true);
 
     // Calculate end point for tracer
     let hitPoint;
@@ -563,7 +580,7 @@ export default class Game {
     this.raycaster.setFromCamera(this.center, this.world.player.camera);
     this.raycaster.far = weapon.range;
 
-    const hits = this.raycaster.intersectObjects(this.world.hittableGroup.children, true);
+    const hits = this.raycaster.intersectObjects(this.world.targetGroup.children, true);
 
     if (hits.length > 0) {
       const hit = hits[0];
