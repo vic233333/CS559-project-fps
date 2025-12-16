@@ -20,6 +20,7 @@ export default class UIManager {
 
     // Settings elements
     this.sensitivitySlider = document.getElementById("sensitivity-slider");
+    this.sensitivityInput = document.getElementById("sensitivity-input");
     this.sensitivityValue = document.getElementById("sensitivity-value");
     this.gameModeRadios = document.querySelectorAll('input[name="game-mode"]');
     this.sessionDuration = document.getElementById("session-duration");
@@ -57,11 +58,14 @@ export default class UIManager {
     // Sensitivity slider
     if (this.sensitivitySlider) {
       this.sensitivitySlider.addEventListener("input", (e) => {
-        const val = parseFloat(e.target.value);
-        this.gameSettings.sensitivity = val;
-        if (this.sensitivityValue) {
-          this.sensitivityValue.textContent = val.toFixed(4);
-        }
+        this._setSensitivity(parseFloat(e.target.value));
+      });
+    }
+
+    // Sensitivity input box
+    if (this.sensitivityInput) {
+      this.sensitivityInput.addEventListener("input", (e) => {
+        this._setSensitivity(parseFloat(e.target.value));
       });
     }
 
@@ -112,6 +116,36 @@ export default class UIManager {
       this.continuousDuration.addEventListener("change", (e) => {
         this.gameSettings.continuousDuration = parseInt(e.target.value, 10);
       });
+    }
+  }
+
+  _getSensitivityLimits() {
+    const min = parseFloat(this.sensitivitySlider?.min ?? this.sensitivityInput?.min ?? "0.0005");
+    const max = parseFloat(this.sensitivitySlider?.max ?? this.sensitivityInput?.max ?? "0.1");
+    return {
+      min: Number.isFinite(min) ? min : 0.0005,
+      max: Number.isFinite(max) ? max : 0.1
+    };
+  }
+
+  _setSensitivity(value) {
+    if (Number.isNaN(value)) return;
+
+    const { min, max } = this._getSensitivityLimits();
+    const clamped = Math.min(max, Math.max(min, value));
+
+    this.gameSettings.sensitivity = clamped;
+
+    if (this.sensitivitySlider) {
+      this.sensitivitySlider.value = clamped;
+    }
+
+    if (this.sensitivityInput) {
+      this.sensitivityInput.value = clamped.toFixed(4);
+    }
+
+    if (this.sensitivityValue) {
+      this.sensitivityValue.textContent = clamped.toFixed(4);
     }
   }
 
@@ -215,12 +249,7 @@ export default class UIManager {
     this._renderWaveConfigs();
     this._toggleModeSettings();
     // Sync UI with current settings
-    if (this.sensitivitySlider) {
-      this.sensitivitySlider.value = this.gameSettings.sensitivity;
-    }
-    if (this.sensitivityValue) {
-      this.sensitivityValue.textContent = this.gameSettings.sensitivity.toFixed(4);
-    }
+    this._setSensitivity(this.gameSettings.sensitivity);
     if (this.sessionDuration) {
       this.sessionDuration.value = this.gameSettings.sessionDuration;
     }

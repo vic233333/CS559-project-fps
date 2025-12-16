@@ -11,6 +11,17 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Rajdhani:wght@500;600;700&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="/src/style.css" />
+
+  <!-- Import map so bare specifiers work when opened via static servers (e.g., VSCode Live Server) -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "/node_modules/three/build/three.module.js",
+        "three/examples/jsm/": "/node_modules/three/examples/jsm/",
+        "cannon-es": "/node_modules/cannon-es/dist/cannon-es.js"
+      }
+    }
+  </script>
 </head>
 
 <body>
@@ -69,7 +80,8 @@
         <div class="settings-section">
           <h3>Mouse Sensitivity</h3>
           <div class="setting-row">
-            <input type="range" id="sensitivity-slider" min="0.0005" max="0.01" step="0.0001" value="0.0025">
+            <input type="range" id="sensitivity-slider" min="0.0005" max="0.1" step="0.0001" value="0.0025">
+            <input type="number" id="sensitivity-input" min="0.0005" max="0.1" step="0.0001" value="0.0025">
             <span id="sensitivity-value">0.0025</span>
           </div>
         </div>

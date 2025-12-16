@@ -134,11 +134,11 @@ export default class InGameUI {
 
     // Panel configurations: [label, delta, color]
     const configs = [
-      ["-0.01", -0.001, "#ff6666"],
-      ["-0.1", -0.0005, "#ffaa66"],
+      ["-0.0001", -0.0001, "#ff6666"],
+      ["-0.001", -0.001, "#ffaa66"],
       ["SENS", 0, "#ffc800"], // Center display
-      ["+0.1", 0.0005, "#66ff66"],
-      ["+0.01", 0.001, "#66ffaa"]
+      ["+0.001", 0.001, "#66ff66"],
+      ["+0.0001", 0.0001, "#66ffaa"]
     ];
 
     configs.forEach((cfg, i) => {

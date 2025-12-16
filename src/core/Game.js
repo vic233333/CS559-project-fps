@@ -323,7 +323,7 @@ export default class Game {
 
   adjustSensitivity(delta) {
     if (!this.world.player) return;
-    const newSens = Math.max(0.0005, Math.min(0.01, this.world.player.sensitivity + delta));
+    const newSens = Math.max(0.0005, Math.min(0.1, this.world.player.sensitivity + delta));
     this.world.player.sensitivity = newSens;
     this.ui.gameSettings.sensitivity = newSens;
   }
