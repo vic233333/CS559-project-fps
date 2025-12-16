@@ -1,7 +1,10 @@
-import { Vector3, Group, Color, Box3, Matrix4, BoxGeometry, SphereGeometry, CylinderGeometry, MeshStandardMaterial, Mesh } from "three";
+import { Vector3, Group, Color, Box3, Matrix4, BoxGeometry, SphereGeometry, CylinderGeometry, MeshStandardMaterial, Mesh, AnimationMixer } from "three";
+import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
 import Entity from "../core/Entity.js";
 import * as CANNON from "cannon-es";
 import Debris from "./Debris.js";
+
+const ROBOT_MODEL_URL = `${import.meta.env.BASE_URL}assets/models/RobotExpressive/RobotExpressive.glb`;
 
 // Robot target with head/body/legs hitboxes and armor system
 export default class Robot extends Entity {
@@ -59,13 +62,20 @@ export default class Robot extends Entity {
     // Color based on armor
     this.baseColor = hasArmor ? 0x4488ff : 0x44ff88;
     this.armorColor = 0x8888ff;
+
+    // Imported model + skeletal animation
+    this.modelRoot = null;
+    this.mixer = null;
+    this.actions = {};
+    this.activeAction = null;
+    this.activeActionName = null;
   }
 
   async build(scene, world) {
     this.world = world;
 
-    // Create robot mesh
-    this._createRobotMesh();
+    // Create robot mesh (prefer imported model with animations, fallback to primitives)
+    await this._createRobotModel();
 
     this.object3D.position.copy(this.position);
     scene.add(this.object3D);
@@ -84,7 +94,149 @@ export default class Robot extends Entity {
     world.physicsWorld.addBody(this.body);
   }
 
-  _createRobotMesh() {
+  async _createRobotModel() {
+    try {
+      const assetManager = this.world?.assetManager;
+      if (!assetManager) {
+        throw new Error("AssetManager not available");
+      }
+
+      // Vite is deployed under a non-root base path; try BASE_URL first, then fall back to root.
+      const urlsToTry = [
+        ROBOT_MODEL_URL,
+        "/assets/models/RobotExpressive/RobotExpressive.glb"
+      ];
+
+      let gltf = null;
+      let lastErr = null;
+      for (const url of urlsToTry) {
+        try {
+          gltf = await assetManager.loadGLTF(url);
+          break;
+        } catch (err) {
+          lastErr = err;
+        }
+      }
+      if (!gltf) throw lastErr || new Error("Failed to load robot GLTF");
+
+      const root = SkeletonUtils.clone(gltf.scene);
+
+      this._normalizeAndScaleModel(root);
+
+      // Shadows
+      root.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+
+      this.object3D.add(root);
+      this.modelRoot = root;
+
+      this._setupAnimations(gltf.animations || []);
+      this._setAnimation(this.moving ? "Walking" : "Idle", true);
+      return;
+    } catch (err) {
+      console.warn(
+        "Robot model load failed, using primitive fallback:",
+        ROBOT_MODEL_URL,
+        err
+      );
+      this._createFallbackRobotMesh();
+    }
+  }
+
+  _setupAnimations(clips) {
+    if (!this.modelRoot || clips.length === 0) return;
+
+    this.mixer = new AnimationMixer(this.modelRoot);
+    this.actions = {};
+    for (const clip of clips) {
+      this.actions[clip.name] = this.mixer.clipAction(clip);
+    }
+  }
+
+  _setAnimation(name, immediate = false) {
+    if (!this.actions || !this.actions[name] || this.activeActionName === name) return;
+
+    const next = this.actions[name];
+    next.enabled = true;
+    next.reset();
+
+    if (!this.activeAction) {
+      next.play();
+      this.activeAction = next;
+      this.activeActionName = name;
+      return;
+    }
+
+    if (immediate) {
+      this.activeAction.stop();
+      next.play();
+      this.activeAction = next;
+      this.activeActionName = name;
+      return;
+    }
+
+    const from = this.activeAction;
+    next.play();
+    from.crossFadeTo(next, 0.2, false);
+    this.activeAction = next;
+    this.activeActionName = name;
+  }
+
+  _normalizeAndScaleModel(root) {
+    // 1) Put feet on ground (minY -> 0).
+    root.updateWorldMatrix(true, true);
+    const box = new Box3().setFromObject(root);
+    if (Number.isFinite(box.min.y) && Number.isFinite(box.max.y)) {
+      root.position.y -= box.min.y;
+    }
+
+    // 2) Scale so that the model head aligns with player camera height.
+    // Prefer a head bone if present; otherwise fall back to scaling by overall height.
+    const desiredHeadY = this.robotHeight - this.headRadius; // ~1.6m
+    root.updateWorldMatrix(true, true);
+
+    const headBones = [];
+    root.traverse((obj) => {
+      if (obj.isBone && /head/i.test(obj.name)) headBones.push(obj);
+    });
+
+    const head =
+      headBones.find((b) => /^head$/i.test(b.name)) ||
+      headBones.find((b) => /head$/i.test(b.name) && !/(end|tip)/i.test(b.name)) ||
+      headBones.find((b) => !/(end|tip)/i.test(b.name)) ||
+      headBones[0] ||
+      null;
+
+    let scale = 1;
+    if (head) {
+      const headPos = new Vector3();
+      head.getWorldPosition(headPos);
+      if (headPos.y > 0.001) {
+        scale = desiredHeadY / headPos.y;
+      }
+    } else {
+      const size = new Vector3();
+      box.getSize(size);
+      if (size.y > 0.001) {
+        scale = this.robotHeight / size.y;
+      }
+    }
+
+    root.scale.setScalar(scale);
+
+    // Re-normalize feet after scaling.
+    root.updateWorldMatrix(true, true);
+    const box2 = new Box3().setFromObject(root);
+    if (Number.isFinite(box2.min.y) && Number.isFinite(box2.max.y)) {
+      root.position.y -= box2.min.y;
+    }
+  }
+
+  _createFallbackRobotMesh() {
     const bodyMat = new MeshStandardMaterial({
       color: new Color(this.baseColor),
       metalness: 0.6,
@@ -277,6 +429,24 @@ export default class Robot extends Entity {
   }
 
   prePhysics(dt) {
+    if (this.mixer) {
+      this.mixer.update(dt);
+    }
+
+    // Animation state selection
+    if (this.moving) {
+      const moveClip = this.speed >= 1.4 ? "Running" : "Walking";
+      this._setAnimation(moveClip);
+      if (this.activeAction) {
+        this.activeAction.timeScale = Math.max(0.8, this.speed);
+      }
+    } else {
+      this._setAnimation("Idle");
+      if (this.activeAction) {
+        this.activeAction.timeScale = 1;
+      }
+    }
+
     if (!this.moving || !this.body) return;
 
     this.time += dt * this.speed;
