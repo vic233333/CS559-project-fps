@@ -164,6 +164,9 @@ export default class Game {
     // Live robot model tuning (applies immediately without page reload)
     this.ui.on("robotModelTuning", ({ scale, yOffset }) => {
       this.world.setRobotModelTuning(scale, yOffset, { applyToExisting: true });
+      // log the new values
+      console.log("New robot model scale:", scale);
+      console.log("New robot model Y offset:", yOffset);
     });
   }
 

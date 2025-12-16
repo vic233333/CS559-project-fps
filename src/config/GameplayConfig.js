@@ -38,8 +38,8 @@ export const UI_DEFAULTS = {
   continuousTargets: 5,
   continuousDuration: GAMEPLAY_CONFIG.sessionLength,
   distributeAngle: 180,
-  robotModelScale: 10.0,
-  robotModelYOffset: 0.0,
+  robotModelScale: 38.998,
+  robotModelYOffset: -5.39,
   // Default settings for creating new waves dynamically
   // Use the first wave as the base template
   baseWave: {
