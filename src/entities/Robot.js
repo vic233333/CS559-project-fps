@@ -49,7 +49,7 @@ export default class Robot extends Entity {
     this.legRadius = 0.08;
 
     // Radius for overlap detection
-    this.radius = 0.5;
+    this.radius = 0.6;
 
     this.object3D.userData.entity = this;
     this.hitboxes = {
@@ -340,26 +340,51 @@ export default class Robot extends Entity {
       roughness: 0.1
     });
 
-    // Head (sphere)
+    // Calculate positions from ground up to ensure proper proportions
+    // Total height: 1.8m, head center at ~1.6m (player eye level)
+    const footHeight = 0.05;
+    const lowerLegLength = 0.4;
+    const kneeRadius = this.legRadius * 1.2;
+    const upperLegLength = 0.4;
+    const hipHeight = 0.1;
+    const neckHeight = 0.1;
+
+    // Position calculations from ground (Y=0) upward
+    const footY = footHeight / 2;                                    // 0.025
+    const lowerLegY = footHeight + lowerLegLength / 2;               // 0.25
+    const kneeY = footHeight + lowerLegLength;                       // 0.45
+    const upperLegY = kneeY + upperLegLength / 2;                    // 0.65
+    const hipY = kneeY + upperLegLength + hipHeight / 2;             // 0.9
+    const bodyY = hipY + hipHeight / 2 + this.bodyHeight / 2;        // 1.3
+    const neckY = bodyY + this.bodyHeight / 2 + neckHeight / 2;      // 1.7
+    const headY = neckY + neckHeight / 2 + this.headRadius;          // 1.87 -> adjusted
+
+    // Adjust so head center is at 1.6m (player eye level)
+    const headTargetY = 1.6;
+    const currentHeadY = neckY + neckHeight / 2 + this.headRadius;
+    const yOffset = headTargetY - currentHeadY;
+
+    // Head (sphere) - positioned at player eye level
     const headGeo = new SphereGeometry(this.headRadius, 16, 12);
     const headMesh = new Mesh(headGeo, bodyMat.clone());
     headMesh.material.emissive = new Color(0xff0000).multiplyScalar(0.2);
-    headMesh.position.y = this.robotHeight - this.headRadius;
+    headMesh.position.y = headTargetY;
     headMesh.castShadow = true;
     headMesh.userData.bodyPart = 'head';
     this.object3D.add(headMesh);
 
     // Neck
-    const neckGeo = new CylinderGeometry(0.05, 0.08, 0.1, 8);
+    const neckGeo = new CylinderGeometry(0.06, 0.1, neckHeight, 8);
     const neckMesh = new Mesh(neckGeo, jointMat);
-    neckMesh.position.y = this.robotHeight - this.headRadius * 2 - 0.05;
+    neckMesh.position.y = headTargetY - this.headRadius - neckHeight / 2;
     neckMesh.castShadow = true;
     this.object3D.add(neckMesh);
 
     // Body (box)
+    const bodyActualY = neckMesh.position.y - neckHeight / 2 - this.bodyHeight / 2;
     const bodyGeo = new BoxGeometry(this.bodyWidth, this.bodyHeight, this.bodyWidth * 0.6);
     const bodyMesh = new Mesh(bodyGeo, this.hasArmor ? armorMat : bodyMat);
-    bodyMesh.position.y = this.robotHeight - this.headRadius * 2 - 0.1 - this.bodyHeight / 2 - 0.05;
+    bodyMesh.position.y = bodyActualY;
     bodyMesh.castShadow = true;
     bodyMesh.userData.bodyPart = 'body';
     this.object3D.add(bodyMesh);
@@ -375,86 +400,90 @@ export default class Robot extends Entity {
     }
 
     // Hip joint
-    const hipY = bodyMesh.position.y - this.bodyHeight / 2 - 0.05;
-    const hipGeo = new BoxGeometry(this.bodyWidth * 0.8, 0.1, this.bodyWidth * 0.5);
+    const hipActualY = bodyActualY - this.bodyHeight / 2 - hipHeight / 2;
+    const hipGeo = new BoxGeometry(this.bodyWidth * 0.8, hipHeight, this.bodyWidth * 0.5);
     const hipMesh = new Mesh(hipGeo, jointMat);
-    hipMesh.position.y = hipY;
+    hipMesh.position.y = hipActualY;
     hipMesh.castShadow = true;
     this.object3D.add(hipMesh);
 
-    // Legs
-    const legSpacing = this.bodyWidth * 0.3;
-    const legStartY = hipY - 0.05;
+    // Legs - calculate from hip down to ground
+    const legSpacing = this.bodyWidth * 0.35;
+    const legTopY = hipActualY - hipHeight / 2;
+    const totalLegHeight = legTopY - footHeight; // Distance from hip bottom to foot top
+    const upperLegActualLength = totalLegHeight * 0.5;
+    const lowerLegActualLength = totalLegHeight * 0.5;
 
-    // Left leg
-    const leftLegGeo = new CylinderGeometry(this.legRadius, this.legRadius * 0.8, this.legHeight, 8);
-    const leftLegMesh = new Mesh(leftLegGeo, this.hasArmor ? armorMat : bodyMat);
-    leftLegMesh.position.set(-legSpacing, legStartY - this.legHeight / 2, 0);
-    leftLegMesh.castShadow = true;
-    leftLegMesh.userData.bodyPart = 'legs';
-    this.object3D.add(leftLegMesh);
+    // Left upper leg
+    const leftUpperLegGeo = new CylinderGeometry(this.legRadius, this.legRadius * 0.85, upperLegActualLength, 8);
+    const leftUpperLegMesh = new Mesh(leftUpperLegGeo, this.hasArmor ? armorMat : bodyMat);
+    leftUpperLegMesh.position.set(-legSpacing, legTopY - upperLegActualLength / 2, 0);
+    leftUpperLegMesh.castShadow = true;
+    leftUpperLegMesh.userData.bodyPart = 'legs';
+    this.object3D.add(leftUpperLegMesh);
 
     // Left knee joint
-    const leftKneeGeo = new SphereGeometry(this.legRadius * 1.2, 8, 8);
+    const leftKneeY = legTopY - upperLegActualLength;
+    const leftKneeGeo = new SphereGeometry(this.legRadius * 1.1, 8, 8);
     const leftKneeMesh = new Mesh(leftKneeGeo, jointMat);
-    leftKneeMesh.position.set(-legSpacing, legStartY - this.legHeight, 0);
+    leftKneeMesh.position.set(-legSpacing, leftKneeY, 0);
     leftKneeMesh.castShadow = true;
     this.object3D.add(leftKneeMesh);
 
     // Left lower leg
-    const leftLowerLegGeo = new CylinderGeometry(this.legRadius * 0.7, this.legRadius * 0.6, this.legHeight * 0.8, 8);
+    const leftLowerLegGeo = new CylinderGeometry(this.legRadius * 0.85, this.legRadius * 0.7, lowerLegActualLength, 8);
     const leftLowerLegMesh = new Mesh(leftLowerLegGeo, bodyMat);
-    leftLowerLegMesh.position.set(-legSpacing, legStartY - this.legHeight - this.legHeight * 0.4, 0);
+    leftLowerLegMesh.position.set(-legSpacing, leftKneeY - lowerLegActualLength / 2, 0);
     leftLowerLegMesh.castShadow = true;
     leftLowerLegMesh.userData.bodyPart = 'legs';
     this.object3D.add(leftLowerLegMesh);
 
     // Left foot
-    const leftFootGeo = new BoxGeometry(this.legRadius * 2.5, 0.05, this.legRadius * 3);
+    const leftFootGeo = new BoxGeometry(this.legRadius * 2.5, footHeight, this.legRadius * 3.5);
     const leftFootMesh = new Mesh(leftFootGeo, jointMat);
-    leftFootMesh.position.set(-legSpacing, 0.025, this.legRadius * 0.5);
+    leftFootMesh.position.set(-legSpacing, footHeight / 2, this.legRadius * 0.8);
     leftFootMesh.castShadow = true;
     leftFootMesh.userData.bodyPart = 'legs';
     this.object3D.add(leftFootMesh);
 
     // Right leg (mirror of left)
-    const rightLegMesh = new Mesh(leftLegGeo.clone(), this.hasArmor ? armorMat.clone() : bodyMat.clone());
-    rightLegMesh.position.set(legSpacing, legStartY - this.legHeight / 2, 0);
-    rightLegMesh.castShadow = true;
-    rightLegMesh.userData.bodyPart = 'legs';
-    this.object3D.add(rightLegMesh);
+    const rightUpperLegMesh = new Mesh(leftUpperLegGeo.clone(), this.hasArmor ? armorMat.clone() : bodyMat.clone());
+    rightUpperLegMesh.position.set(legSpacing, legTopY - upperLegActualLength / 2, 0);
+    rightUpperLegMesh.castShadow = true;
+    rightUpperLegMesh.userData.bodyPart = 'legs';
+    this.object3D.add(rightUpperLegMesh);
 
     const rightKneeMesh = new Mesh(leftKneeGeo.clone(), jointMat.clone());
-    rightKneeMesh.position.set(legSpacing, legStartY - this.legHeight, 0);
+    rightKneeMesh.position.set(legSpacing, leftKneeY, 0);
     rightKneeMesh.castShadow = true;
     this.object3D.add(rightKneeMesh);
 
     const rightLowerLegMesh = new Mesh(leftLowerLegGeo.clone(), bodyMat.clone());
-    rightLowerLegMesh.position.set(legSpacing, legStartY - this.legHeight - this.legHeight * 0.4, 0);
+    rightLowerLegMesh.position.set(legSpacing, leftKneeY - lowerLegActualLength / 2, 0);
     rightLowerLegMesh.castShadow = true;
     rightLowerLegMesh.userData.bodyPart = 'legs';
     this.object3D.add(rightLowerLegMesh);
 
     const rightFootMesh = new Mesh(leftFootGeo.clone(), jointMat.clone());
-    rightFootMesh.position.set(legSpacing, 0.025, this.legRadius * 0.5);
+    rightFootMesh.position.set(legSpacing, footHeight / 2, this.legRadius * 0.8);
     rightFootMesh.castShadow = true;
     rightFootMesh.userData.bodyPart = 'legs';
     this.object3D.add(rightFootMesh);
 
-    // Eyes (glowing)
+    // Eyes (glowing) - positioned at head level
     const eyeMat = new MeshStandardMaterial({
       color: 0xff0000,
       emissive: 0xff0000,
       emissiveIntensity: 2
     });
-    const eyeGeo = new SphereGeometry(0.02, 8, 8);
+    const eyeGeo = new SphereGeometry(0.03, 8, 8);
 
     const leftEye = new Mesh(eyeGeo, eyeMat);
-    leftEye.position.set(-0.05, this.robotHeight - this.headRadius, this.headRadius * 0.8);
+    leftEye.position.set(-0.06, headTargetY, this.headRadius * 0.85);
     this.object3D.add(leftEye);
 
     const rightEye = new Mesh(eyeGeo, eyeMat.clone());
-    rightEye.position.set(0.05, this.robotHeight - this.headRadius, this.headRadius * 0.8);
+    rightEye.position.set(0.06, headTargetY, this.headRadius * 0.85);
     this.object3D.add(rightEye);
   }
 
@@ -465,20 +494,26 @@ export default class Robot extends Entity {
       visible: false // Set to true for debugging
     });
 
-    // Head hitbox
-    const headHitboxGeo = new SphereGeometry(this.headRadius * 1.2, 8, 8);
+    // Head hitbox - at player eye level (1.6m)
+    const headHitboxGeo = new SphereGeometry(this.headRadius * 1.3, 8, 8);
     this.hitboxes.head = new Mesh(headHitboxGeo, hitboxMat.clone());
     this.hitboxes.head.userData.entity = this;
     this.hitboxes.head.userData.bodyPart = 'head';
 
-    // Body hitbox
-    const bodyHitboxGeo = new BoxGeometry(this.bodyWidth * 1.1, this.bodyHeight * 1.1, this.bodyWidth * 0.7);
+    // Body hitbox - from neck to hip
+    const bodyHitboxGeo = new BoxGeometry(this.bodyWidth * 1.2, this.bodyHeight * 1.2, this.bodyWidth * 0.8);
     this.hitboxes.body = new Mesh(bodyHitboxGeo, hitboxMat.clone());
     this.hitboxes.body.userData.entity = this;
     this.hitboxes.body.userData.bodyPart = 'body';
 
-    // Legs hitbox (combined)
-    const legsHitboxGeo = new BoxGeometry(this.bodyWidth * 1.2, this.legHeight * 1.8 + 0.1, this.bodyWidth * 0.6);
+    // Legs hitbox (combined) - from hip to ground
+    // Calculate leg height based on new proportions
+    const headY = 1.6; // Head center at eye level
+    const neckHeight = 0.1;
+    const hipHeight = 0.1;
+    const bodyBottomY = headY - this.headRadius - neckHeight - this.bodyHeight - hipHeight / 2;
+    const legsHeight = bodyBottomY; // From hip to ground
+    const legsHitboxGeo = new BoxGeometry(this.bodyWidth * 1.0, legsHeight, this.bodyWidth * 0.5);
     this.hitboxes.legs = new Mesh(legsHitboxGeo, hitboxMat.clone());
     this.hitboxes.legs.userData.entity = this;
     this.hitboxes.legs.userData.bodyPart = 'legs';
@@ -491,22 +526,24 @@ export default class Robot extends Entity {
 
     const pos = this.object3D.position;
 
-    // Head
-    this.hitboxes.head.position.set(
-      pos.x,
-      pos.y + this.robotHeight - this.headRadius,
-      pos.z
-    );
+    // Calculate positions based on new mesh layout
+    const headY = 1.6; // Head center at player eye level
+    const neckHeight = 0.1;
+    const hipHeight = 0.1;
+
+    // Head - at 1.6m (player eye level)
+    this.hitboxes.head.position.set(pos.x, pos.y + headY, pos.z);
     this.hitboxes.head.quaternion.copy(this.object3D.quaternion);
 
-    // Body
-    const bodyY = this.robotHeight - this.headRadius * 2 - 0.1 - this.bodyHeight / 2 - 0.05;
+    // Body - centered between neck and hip
+    const neckBottomY = headY - this.headRadius - neckHeight;
+    const bodyY = neckBottomY - this.bodyHeight / 2;
     this.hitboxes.body.position.set(pos.x, pos.y + bodyY, pos.z);
     this.hitboxes.body.quaternion.copy(this.object3D.quaternion);
 
-    // Legs
-    const hipY = bodyY - this.bodyHeight / 2 - 0.05;
-    const legsY = (hipY + 0) / 2; // Average between hip and ground
+    // Legs - from hip to ground, centered at half height
+    const hipBottomY = neckBottomY - this.bodyHeight - hipHeight;
+    const legsY = hipBottomY / 2; // Center of legs area
     this.hitboxes.legs.position.set(pos.x, pos.y + legsY, pos.z);
     this.hitboxes.legs.quaternion.copy(this.object3D.quaternion);
   }
@@ -603,15 +640,26 @@ export default class Robot extends Entity {
   _getBodyPartFromPoint(hitPoint) {
     const localY = hitPoint.y - this.object3D.position.y;
 
-    // Head zone (top 0.3 units)
-    if (localY > this.robotHeight - this.headRadius * 2 - 0.1) {
+    // Calculate zone boundaries based on new proportions
+    // Head center at 1.6m (player eye level)
+    const headY = 1.6;
+    const neckHeight = 0.1;
+    const hipHeight = 0.1;
+
+    // Neck bottom is where body starts
+    const neckBottomY = headY - this.headRadius - neckHeight; // ~1.32
+    // Hip bottom is where legs start
+    const hipBottomY = neckBottomY - this.bodyHeight - hipHeight; // ~0.52
+
+    // Head zone (from neck top upward)
+    if (localY > neckBottomY) {
       return 'head';
     }
-    // Body zone (middle section)
-    if (localY > this.robotHeight - this.headRadius * 2 - 0.1 - this.bodyHeight - 0.1) {
+    // Body zone (from hip top to neck bottom)
+    if (localY > hipBottomY) {
       return 'body';
     }
-    // Legs zone (lower section)
+    // Legs zone (from ground to hip)
     return 'legs';
   }
 

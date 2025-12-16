@@ -136,6 +136,9 @@ export default class World {
       const minY = 0.5; // Minimum spawn height
       const maxY = Math.min(maxHeightY, 4.5);
       finalPosition.y = minY + Math.random() * (maxY - minY);
+    } else if (targetType === "robot") {
+      // Robots should have their feet on the ground (Y=0)
+      finalPosition.y = 0;
     }
 
     // Check for spawn overlap and adjust position if needed
