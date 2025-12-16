@@ -226,23 +226,29 @@ export default class Robot extends Entity {
     const size = new Vector3();
     box.getSize(size);
 
-    if (size.y < 0.001) {
-      console.warn("Robot model has zero height, cannot scale");
-      return;
-    }
+    console.log(`Robot model original size: ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}`);
+    console.log(`Robot model original bounds: min=(${box.min.x.toFixed(2)}, ${box.min.y.toFixed(2)}, ${box.min.z.toFixed(2)}), max=(${box.max.x.toFixed(2)}, ${box.max.y.toFixed(2)}, ${box.max.z.toFixed(2)})`);
 
-    // Scale the model to match target height
-    const scaleFactor = targetHeight / size.y;
-    root.scale.setScalar(scaleFactor);
+    if (size.y < 0.001) {
+      console.warn("Robot model has zero height, using default scale");
+      root.scale.setScalar(1.0);
+    } else {
+      // Scale the model to match target height
+      const scaleFactor = targetHeight / size.y;
+      console.log(`Robot scale factor: ${scaleFactor.toFixed(3)} (target: ${targetHeight}m, original: ${size.y.toFixed(2)}m)`);
+      root.scale.setScalar(scaleFactor);
+    }
 
     // Recompute bounding box after scaling
     root.updateWorldMatrix(true, true);
     const scaledBox = new Box3().setFromObject(root);
+    const scaledSize = new Vector3();
+    scaledBox.getSize(scaledSize);
+
+    console.log(`Robot model scaled size: ${scaledSize.x.toFixed(2)} x ${scaledSize.y.toFixed(2)} x ${scaledSize.z.toFixed(2)}`);
 
     // Move model so its feet (bottom of bounding box) are at Y = 0
     root.position.y -= scaledBox.min.y;
-
-    console.log(`Robot scaled by ${scaleFactor.toFixed(2)}x, original height: ${size.y.toFixed(2)}m, target: ${targetHeight}m`);
   }
 
   _snapFeetToGround(root) {
