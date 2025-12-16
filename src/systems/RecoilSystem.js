@@ -5,9 +5,9 @@ export default class RecoilSystem {
   constructor() {
     // Spread configuration
     this.baseSpread = 0;          // Base spread when stationary
-    this.moveSpreadMultiplier = 2.5;  // Spread multiplier when moving
+    this.moveSpreadMultiplier = 5.0;  // Spread multiplier when moving
     this.airSpreadMultiplier = 5.0;   // Spread multiplier when airborne
-    this.maxSpread = 0.15;        // Maximum spread angle in radians
+    this.maxSpread = 0.8;        // Maximum spread angle in radians
 
     // Recoil configuration
     // - First few shots should feel stable.
