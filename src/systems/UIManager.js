@@ -33,6 +33,12 @@ export default class UIManager {
     this.waveSettings = document.querySelector(".wave-settings");
     this.continuousSettings = document.querySelector(".continuous-settings");
 
+    // Target type settings elements
+    this.targetTypeRadios = document.querySelectorAll('input[name="target-type"]');
+    this.robotArmorCheckbox = document.getElementById("robot-armor");
+    this.robotMovingCheckbox = document.getElementById("robot-moving");
+    this.robotSettings = document.querySelector(".robot-settings");
+
     // Game settings state
     this.gameSettings = {
       sensitivity: UI_DEFAULTS.sensitivity,
@@ -42,7 +48,10 @@ export default class UIManager {
       waves: [],
       continuousTargets: UI_DEFAULTS.continuousTargets,
       continuousDuration: UI_DEFAULTS.continuousDuration,
-      distributeAngle: UI_DEFAULTS.distributeAngle
+      distributeAngle: UI_DEFAULTS.distributeAngle,
+      targetType: "geometric",
+      robotArmor: false,
+      robotMoving: true
     };
 
     this._initDefaultWaves();
@@ -116,6 +125,33 @@ export default class UIManager {
       this.continuousDuration.addEventListener("change", (e) => {
         this.gameSettings.continuousDuration = parseInt(e.target.value, 10);
       });
+    }
+
+    // Target type toggle
+    this.targetTypeRadios.forEach((radio) => {
+      radio.addEventListener("change", (e) => {
+        this.gameSettings.targetType = e.target.value;
+        this._toggleTargetTypeSettings();
+      });
+    });
+
+    // Robot settings
+    if (this.robotArmorCheckbox) {
+      this.robotArmorCheckbox.addEventListener("change", (e) => {
+        this.gameSettings.robotArmor = e.target.checked;
+      });
+    }
+
+    if (this.robotMovingCheckbox) {
+      this.robotMovingCheckbox.addEventListener("change", (e) => {
+        this.gameSettings.robotMoving = e.target.checked;
+      });
+    }
+  }
+
+  _toggleTargetTypeSettings() {
+    if (this.robotSettings) {
+      this.robotSettings.style.display = this.gameSettings.targetType === "robot" ? "block" : "none";
     }
   }
 
@@ -268,6 +304,17 @@ export default class UIManager {
     if (this.distributeAngleValue) {
       this.distributeAngleValue.textContent = `${this.gameSettings.distributeAngle}°`;
     }
+    // Sync target type settings
+    this.targetTypeRadios.forEach((radio) => {
+      radio.checked = radio.value === this.gameSettings.targetType;
+    });
+    if (this.robotArmorCheckbox) {
+      this.robotArmorCheckbox.checked = this.gameSettings.robotArmor;
+    }
+    if (this.robotMovingCheckbox) {
+      this.robotMovingCheckbox.checked = this.gameSettings.robotMoving;
+    }
+    this._toggleTargetTypeSettings();
   }
 
   showPause() {

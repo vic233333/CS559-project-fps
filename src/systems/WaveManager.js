@@ -11,6 +11,17 @@ export default class WaveManager {
     this.activeTargets = [];
     this.onWave = () => {};
     this.allWavesComplete = false;
+
+    // Target type settings
+    this.targetType = "geometric";
+    this.robotArmor = false;
+    this.robotMoving = true;
+  }
+
+  setTargetSettings(targetType, robotArmor, robotMoving) {
+    this.targetType = targetType || "geometric";
+    this.robotArmor = robotArmor || false;
+    this.robotMoving = robotMoving !== false;
   }
 
   setSpawnPoints(points) {
@@ -37,17 +48,24 @@ export default class WaveManager {
     this.activeTargets = [];
 
     const moveCount = Math.floor(wave.targets * wave.movingRatio);
+    const isRobot = this.targetType === "robot";
+
     for (let i = 0; i < wave.targets; i++) {
-      const moving = i < moveCount;
+      // For robots, use robotMoving setting; for geometric, use wave moving ratio
+      const moving = isRobot ? this.robotMoving : i < moveCount;
       const spawn =
         this.spawnPoints.length > 0
           ? this.spawnPoints[i % this.spawnPoints.length].position
           : this._fallbackSpawn(i, wave.targets);
+
       const target = await this.world.spawnTarget({
         moving,
         speed: wave.speed,
         radius: this.config.target.radius,
-        position: spawn.clone()
+        position: spawn.clone(),
+        targetType: this.targetType,
+        hasArmor: this.robotArmor,
+        maxHeightY: isRobot ? null : 4.5 // Only apply height variation to geometric targets
       });
       this.activeTargets.push(target);
     }

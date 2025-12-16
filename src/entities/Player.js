@@ -27,6 +27,7 @@ export default class Player {
     this.isCrouching = false;
     this.isMoving = false;
     this.weaponSpeedMultiplier = 1.0;
+    this.viewPunchOffset = null; // Will be set by Game
 
     this.stateMachine = new StateMachine("idle");
     this._setupStates();
@@ -67,6 +68,13 @@ export default class Player {
     const look = this.input.consumeLookDelta();
     this.heading.y -= look.x * this.sensitivity;
     this.heading.x -= look.y * this.sensitivity;
+
+    // Add view punch from recoil (if provided externally)
+    if (this.viewPunchOffset) {
+      this.heading.x += this.viewPunchOffset.x;
+      this.heading.y += this.viewPunchOffset.y;
+    }
+
     this.heading.x = MathUtils.clamp(this.heading.x, -Math.PI / 2 + 0.05, Math.PI / 2 - 0.05);
     this.camera.quaternion.setFromEuler(this.heading);
 

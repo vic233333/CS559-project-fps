@@ -95,6 +95,40 @@
         </div>
 
         <div class="settings-section">
+          <h3>Target Type</h3>
+          <div class="setting-row radio-row">
+            <label>
+              <input type="radio" name="target-type" value="geometric" checked>
+              Geometric (Spheres/Cubes)
+            </label>
+            <label>
+              <input type="radio" name="target-type" value="robot">
+              Robot (Humanoid)
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-section robot-settings" style="display: none;">
+          <h3>Robot Settings</h3>
+          <div class="setting-row">
+            <label>
+              <input type="checkbox" id="robot-armor">
+              Enable Armor (50 armor, absorbs 50% body/leg damage)
+            </label>
+          </div>
+          <div class="setting-row">
+            <label>
+              <input type="checkbox" id="robot-moving" checked>
+              Robots Move
+            </label>
+          </div>
+          <div class="damage-info">
+            <p>Damage: Head=160 | Body=40 | Legs=34</p>
+            <p>Health: 100 HP</p>
+          </div>
+        </div>
+
+        <div class="settings-section">
           <h3>Game Mode</h3>
           <div class="setting-row radio-row">
             <label>

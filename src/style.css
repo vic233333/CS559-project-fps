@@ -880,3 +880,57 @@ body::after {
   font-size: 16px;
   border-right-color: var(--c-text-muted);
 }
+
+/* --- Robot Settings --- */
+.robot-settings {
+  background: rgba(68, 136, 255, 0.05);
+  border-left: 2px solid #4488ff;
+  padding-left: 14px;
+}
+
+.robot-settings .setting-row label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.setting-row input[type="checkbox"] {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--c-panel-border);
+  border-radius: 3px;
+  cursor: pointer;
+  position: relative;
+}
+
+.setting-row input[type="checkbox"]:checked {
+  border-color: var(--c-primary);
+  background: var(--c-primary);
+}
+
+.setting-row input[type="checkbox"]:checked::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #000;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.damage-info {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--c-text-muted);
+  font-family: var(--f-display);
+}
+
+.damage-info p {
+  margin: 4px 0;
+}
