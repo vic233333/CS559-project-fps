@@ -71,7 +71,10 @@ export function createFullProfile(assetManager) {
         try {
           const gltf = await assetManager.loadGLTF(choice.url);
           const clone = gltf.scene.clone(true);
-          clone.scale.setScalar(choice.scale || 1);
+          // Treat config scale as a multiplier so cm-authored exports (often carrying a root scale)
+          // don't get double-scaled into tiny targets.
+          const scale = Number.isFinite(choice.scale) ? choice.scale : 1;
+          clone.scale.multiplyScalar(scale);
           clone.traverse((child) => {
             child.castShadow = true;
             child.receiveShadow = true;

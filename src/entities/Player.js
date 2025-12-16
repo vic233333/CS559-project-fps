@@ -36,13 +36,16 @@ export default class Player {
   }
 
   reset(spawn) {
-    const target = spawn ? new Vector3().copy(spawn) : new Vector3(0, this.eyeHeightStanding, 8);
+    // `spawn.y` is interpreted as desired eye height above ground.
+    const targetEye = spawn ? new Vector3().copy(spawn) : new Vector3(0, this.eyeHeightStanding, 8);
+    const bodyCenterYOffset = this.eyeHeightStanding - this.bodyHeight * 0.5; // eyeY - centerY when standing
+    const targetBodyY = targetEye.y - bodyCenterYOffset;
     if (this.body) {
-      this.body.position.set(target.x, target.y, target.z);
+      this.body.position.set(targetEye.x, targetBodyY, targetEye.z);
       this.body.velocity.set(0, 0, 0);
       this.body.angularVelocity.set(0, 0, 0);
     }
-    this.camera.position.copy(target);
+    this.camera.position.copy(targetEye);
     this.heading.set(0, 0, 0, "YXZ");
     this.interpolatedEyeOffset = this.eyeHeightStanding;
     this.isCrouching = false;
@@ -204,11 +207,17 @@ export default class Player {
 
   setupPhysicsBody() {
     const shape = new CANNON.Cylinder(this.radius, this.radius, this.bodyHeight, 8);
+    const bodyCenterYOffset = this.eyeHeightStanding - this.bodyHeight * 0.5;
     const body = new CANNON.Body({
       mass: 80,
       shape,
       material: this.world.physicsMaterials.player,
-      position: new CANNON.Vec3(this.camera.position.x, this.camera.position.y, this.camera.position.z),
+      // Physics body is centered; camera is at eye height.
+      position: new CANNON.Vec3(
+        this.camera.position.x,
+        this.camera.position.y - bodyCenterYOffset,
+        this.camera.position.z
+      ),
       fixedRotation: true,
       linearDamping: 0.08
     });

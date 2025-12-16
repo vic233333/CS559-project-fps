@@ -99,7 +99,7 @@ export default class World {
     // Reset player position
     const spawn = sceneConfig?.playerSpawn
       ? new Vector3(...sceneConfig.playerSpawn)
-      : new Vector3(0, this.player.height, 8);
+      : new Vector3(0, this.player.eyeHeightStanding, 8);
     this.player.reset(spawn);
 
     // Configure render clear color to match sky
