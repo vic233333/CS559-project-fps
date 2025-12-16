@@ -36,7 +36,8 @@ export default class Robot extends Entity {
     this.directionChangeInterval = 2 + Math.random() * 2;
 
     // Robot dimensions
-    this.robotHeight = 1.8;
+    // Head center sits at ~1.6m when feet are on ground (aligns with player camera height).
+    this.robotHeight = 1.75;
     this.headRadius = 0.15;
     this.bodyWidth = 0.4;
     this.bodyHeight = 0.6;

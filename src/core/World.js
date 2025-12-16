@@ -125,6 +125,10 @@ export default class World {
 
     // Apply Y-axis height variation for geometric targets
     let finalPosition = position.clone();
+    if (targetType === "robot") {
+      // Robots are grounded (their model origin is at feet). Keep their head around player camera height.
+      finalPosition.y = 0;
+    }
     if (targetType === "geometric" && maxHeightY !== null) {
       // Add random height within the limit
       // Max height based on ~30 degree look angle from player eye (1.6m)
