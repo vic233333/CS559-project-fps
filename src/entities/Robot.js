@@ -217,77 +217,32 @@ export default class Robot extends Entity {
   }
 
   _normalizeAndScaleModel(root) {
-    const desiredHeadY = this.robotHeight - this.headRadius; // ~1.6m
+    // Target: robot height = 1.75m, head center at ~1.6m
+    const targetHeight = this.robotHeight;
+
+    // First, compute the model's original bounding box
     root.updateWorldMatrix(true, true);
+    const box = new Box3().setFromObject(root);
+    const size = new Vector3();
+    box.getSize(size);
 
-    let skinnedMesh = null;
-    root.traverse((obj) => {
-      if (!skinnedMesh && obj.isSkinnedMesh) skinnedMesh = obj;
-    });
-    const bones = skinnedMesh?.skeleton?.bones || null;
-
-    const findBone = (name, fallbackRegex = null) => {
-      if (!bones) return null;
-      const exact = bones.find((b) => b.name === name);
-      if (exact) return exact;
-      if (!fallbackRegex) return null;
-      return (
-        bones.find((b) => fallbackRegex.test(b.name) && !/(end|tip)$/i.test(b.name)) ||
-        bones.find((b) => fallbackRegex.test(b.name)) ||
-        null
-      );
-    };
-
-    const headBone = findBone("Head", /head$/i);
-    const footLBone = findBone("Foot.L", /^foot\.l$/i);
-    const footRBone = findBone("Foot.R", /^foot\.r$/i);
-    const footBones = [footLBone, footRBone].filter(Boolean);
-
-    const alignFeet = () => {
-      if (footBones.length === 0) return false;
-      root.updateWorldMatrix(true, true);
-      let minFootY = Number.POSITIVE_INFINITY;
-      const tmp = new Vector3();
-      for (const b of footBones) {
-        b.getWorldPosition(tmp);
-        if (tmp.y < minFootY) minFootY = tmp.y;
-      }
-      if (!Number.isFinite(minFootY)) return false;
-      const groundY = minFootY - ROBOT_FOOT_SOLE_OFFSET;
-      root.position.y -= groundY;
-      return true;
-    };
-
-    if (headBone && footBones.length > 0) {
-      // Align feet first, then scale based on head height, then re-align feet.
-      alignFeet();
-      root.updateWorldMatrix(true, true);
-      const headPos = new Vector3();
-      headBone.getWorldPosition(headPos);
-      if (headPos.y > 0.001) {
-        const scale = desiredHeadY / headPos.y;
-        root.scale.setScalar(scale);
-      }
-      alignFeet();
+    if (size.y < 0.001) {
+      console.warn("Robot model has zero height, cannot scale");
       return;
     }
 
-    // Fallback: use bounding box based alignment + overall height scaling.
+    // Scale the model to match target height
+    const scaleFactor = targetHeight / size.y;
+    root.scale.setScalar(scaleFactor);
+
+    // Recompute bounding box after scaling
     root.updateWorldMatrix(true, true);
-    const box = new Box3().setFromObject(root);
-    if (Number.isFinite(box.min.y) && Number.isFinite(box.max.y)) {
-      root.position.y -= box.min.y;
-    }
-    const size = new Vector3();
-    box.getSize(size);
-    if (size.y > 0.001) {
-      root.scale.setScalar(this.robotHeight / size.y);
-    }
-    root.updateWorldMatrix(true, true);
-    const box2 = new Box3().setFromObject(root);
-    if (Number.isFinite(box2.min.y) && Number.isFinite(box2.max.y)) {
-      root.position.y -= box2.min.y;
-    }
+    const scaledBox = new Box3().setFromObject(root);
+
+    // Move model so its feet (bottom of bounding box) are at Y = 0
+    root.position.y -= scaledBox.min.y;
+
+    console.log(`Robot scaled by ${scaleFactor.toFixed(2)}x, original height: ${size.y.toFixed(2)}m, target: ${targetHeight}m`);
   }
 
   _snapFeetToGround(root) {
