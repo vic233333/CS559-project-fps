@@ -508,9 +508,8 @@ export default class Game {
     if (this.visualEffects) {
       this.visualEffects.createTracer(muzzlePos, hitPoint, 0.08);
 
-      // Create impact decal if we hit something
+      // Impact sparks only (bullet-hole decals removed)
       if (hitNormal) {
-        this.visualEffects.createDecal(hitPoint, hitNormal);
         this.visualEffects.createImpactSparks(hitPoint, hitNormal, 3);
       }
     }

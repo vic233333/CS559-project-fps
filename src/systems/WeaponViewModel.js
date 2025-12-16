@@ -35,7 +35,15 @@ export default class WeaponViewModel {
       recovery: new Vector3(),     // Recovery velocity
       viewPunch: new Euler(),      // Camera punch rotation
       viewPunchVelocity: new Euler(),
-      accumulator: 0               // Accumulated recoil for sustained fire
+      accumulator: 0,              // Accumulated recoil for sustained fire
+      timeSinceLastShot: Number.POSITIVE_INFINITY,
+      burstShots: 0
+    };
+
+    // Tunables for view-model recoil feel
+    this.recoilConfig = {
+      stableShots: 3,
+      burstResetTime: 0.25
     };
 
     // Animation state
@@ -298,6 +306,8 @@ export default class WeaponViewModel {
       this.recoil.current.set(0, 0, 0);
       this.recoil.target.set(0, 0, 0);
       this.recoil.accumulator = 0;
+      this.recoil.timeSinceLastShot = Number.POSITIVE_INFINITY;
+      this.recoil.burstShots = 0;
 
       // Reset knife state
       if (weaponKey === "knife") {
@@ -331,18 +341,33 @@ export default class WeaponViewModel {
       return this.tryKnifeAttack();
     }
 
-    // Apply recoil kick
-    this.recoil.target.z = 0.03;  // Kick back
-    this.recoil.target.y = 0.01;  // Kick up slightly
-    this.recoil.target.x = (Math.random() - 0.5) * 0.005; // Slight horizontal
+    // Reset burst if we paused long enough (keeps first few shots stable)
+    if (this.recoil.timeSinceLastShot > this.recoilConfig.burstResetTime) {
+      this.recoil.burstShots = 0;
+      this.recoil.accumulator = 0;
+    }
+    this.recoil.timeSinceLastShot = 0;
+    this.recoil.burstShots += 1;
 
-    // Accumulate for sustained fire
-    this.recoil.accumulator += 0.02;
-    this.recoil.accumulator = Math.min(this.recoil.accumulator, 0.1);
+    const unstableShots = Math.max(0, this.recoil.burstShots - this.recoilConfig.stableShots);
+
+    // Build up recoil only after the stable shots
+    if (unstableShots > 0) {
+      const ramp = 1 + Math.min(unstableShots, 6) * 0.12;
+      this.recoil.accumulator = Math.min(this.recoil.accumulator + 0.01 * ramp, 0.12);
+    }
+
+    const heat01 = Math.min(1, this.recoil.accumulator / 0.12);
+
+    // Apply recoil kick
+    this.recoil.target.z = 0.02 + heat01 * 0.015; // Kick back
+    this.recoil.target.y = 0.004 + heat01 * 0.006; // Kick up slightly
+    const xRange = unstableShots > 0 ? (0.0008 + heat01 * 0.0035) : 0.0002;
+    this.recoil.target.x = (Math.random() - 0.5) * 2 * xRange;
 
     // View punch (camera shake)
-    this.recoil.viewPunch.x = -0.02 - this.recoil.accumulator * 0.5; // Punch up
-    this.recoil.viewPunch.y = (Math.random() - 0.5) * 0.01;
+    this.recoil.viewPunch.x = 0.01 + heat01 * 0.03; // Punch up
+    this.recoil.viewPunch.y = (Math.random() - 0.5) * (0.002 + heat01 * 0.01);
 
     // Trigger muzzle flash
     this.muzzleFlash.active = true;
@@ -362,6 +387,11 @@ export default class WeaponViewModel {
   }
 
   update(dt, playerVelocity = new Vector3(), isGrounded = true, isFiring = false) {
+    this.recoil.timeSinceLastShot += dt;
+    if (this.recoil.timeSinceLastShot > this.recoilConfig.burstResetTime) {
+      this.recoil.burstShots = 0;
+    }
+
     // Update knife state machine
     if (this.currentWeaponKey === "knife") {
       this.knifeState.update(dt);
@@ -406,7 +436,7 @@ export default class WeaponViewModel {
       this.currentWeapon.position.z += this.recoil.current.z;
 
       // Slight rotation from recoil
-      this.currentWeapon.rotation.x = -this.recoil.current.z * 3;
+      this.currentWeapon.rotation.x = this.recoil.current.z * 2.5;
     }
 
     // Update muzzle flash

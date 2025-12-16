@@ -10,15 +10,25 @@ export default class RecoilSystem {
     this.maxSpread = 0.15;        // Maximum spread angle in radians
 
     // Recoil configuration
-    this.recoilPerShot = 0.008;   // View punch per shot
-    this.maxViewPunch = 0.08;     // Maximum accumulated view punch
-    this.recoverySpeed = 5;       // How fast recoil recovers
+    // - First few shots should feel stable.
+    // - Sustained fire becomes less stable (more climb + spread).
+    this.stableShots = 3;         // "Stable" shots at the start of a burst
+    this.burstResetTime = 0.25;   // Seconds since last shot to reset burst stability
+
+    this.recoilPerShot = 0.0045;  // Recoil heat added per shot (after stable shots)
+    this.recoilRampPerShot = 0.15; // Extra heat per shot deeper into a burst
+    this.maxViewPunch = 0.05;     // Maximum recoil heat (also drives max spread)
+    this.recoverySpeed = 7;       // How fast camera kick target recovers
 
     // State
     this.currentSpread = 0;
     this.viewPunchAccumulator = 0;
     this.viewPunch = new Euler(0, 0, 0, "YXZ");
     this.targetViewPunch = new Euler(0, 0, 0, "YXZ");
+
+    // Burst tracking for "first 3 shots stable"
+    this.timeSinceLastShot = Number.POSITIVE_INFINITY;
+    this.burstShots = 0;
   }
 
   // Calculate spread based on player state
@@ -85,19 +95,50 @@ export default class RecoilSystem {
 
   // Called when weapon fires
   onFire() {
-    // Add recoil
-    this.viewPunchAccumulator = Math.min(
-      this.viewPunchAccumulator + this.recoilPerShot,
-      this.maxViewPunch
-    );
+    // Reset burst if the player paused firing long enough.
+    if (this.timeSinceLastShot > this.burstResetTime) {
+      this.burstShots = 0;
+      this.viewPunchAccumulator = 0;
+      this.targetViewPunch.set(0, 0, 0);
+    }
+    this.timeSinceLastShot = 0;
+    this.burstShots += 1;
 
-    // Set target view punch (camera kick)
-    this.targetViewPunch.x = -this.viewPunchAccumulator * 0.5 - Math.random() * 0.01;
-    this.targetViewPunch.y = (Math.random() - 0.5) * this.viewPunchAccumulator * 0.3;
+    const unstableShots = Math.max(0, this.burstShots - this.stableShots);
+
+    // Add recoil "heat" only after the stable shots.
+    if (unstableShots > 0) {
+      const ramp = 1 + Math.min(unstableShots, 6) * this.recoilRampPerShot;
+      this.viewPunchAccumulator = Math.min(
+        this.viewPunchAccumulator + this.recoilPerShot * ramp,
+        this.maxViewPunch
+      );
+    }
+
+    const heat01 = this.maxViewPunch > 0 ? (this.viewPunchAccumulator / this.maxViewPunch) : 0;
+
+    // Camera kick: positive X = pitch up in our Player heading convention.
+    const stableKick = 0.0018; // gentle up-kick per shot
+    const kickFromHeat = 0.0050 * heat01;
+    const verticalRandom = Math.random() * (0.00015 + heat01 * 0.0006); // always adds upward
+    const pitchKick = stableKick + kickFromHeat + verticalRandom;
+
+    // Horizontal wobble: keep first shots very stable, ramp with heat.
+    const yawRange = (unstableShots > 0 ? (0.0003 + heat01 * 0.0022) : 0.0001);
+    const yawKick = (Math.random() - 0.5) * 2 * yawRange;
+
+    // Accumulate into the target so sustained fire "climbs" smoothly.
+    this.targetViewPunch.x = MathUtils.clamp(this.targetViewPunch.x + pitchKick, 0, 0.18);
+    this.targetViewPunch.y = MathUtils.clamp(this.targetViewPunch.y + yawKick, -0.12, 0.12);
   }
 
   // Update recoil recovery
   update(dt, isFiring = false) {
+    this.timeSinceLastShot += dt;
+    if (this.timeSinceLastShot > this.burstResetTime) {
+      this.burstShots = 0;
+    }
+
     // View punch interpolation
     this.viewPunch.x = MathUtils.lerp(this.viewPunch.x, this.targetViewPunch.x, dt * 20);
     this.viewPunch.y = MathUtils.lerp(this.viewPunch.y, this.targetViewPunch.y, dt * 20);
@@ -133,5 +174,7 @@ export default class RecoilSystem {
     this.viewPunchAccumulator = 0;
     this.viewPunch.set(0, 0, 0);
     this.targetViewPunch.set(0, 0, 0);
+    this.timeSinceLastShot = Number.POSITIVE_INFINITY;
+    this.burstShots = 0;
   }
 }
