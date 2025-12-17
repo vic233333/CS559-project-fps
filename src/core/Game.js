@@ -112,7 +112,14 @@ export default class Game {
 
   async init() {
     await this.applyMode(this.modeManager.currentMode());
-    this.ui.showMenu();
+
+    // Show tutorial for first-time users
+    if (this.ui.shouldShowTutorial()) {
+      this.ui.showTutorial();
+    } else {
+      this.ui.showMenu();
+    }
+
     this.loop();
   }
 

@@ -197,6 +197,60 @@
         </div>
       </div>
 
+      <!-- Tutorial Modal (First-time users) -->
+      <div id="tutorial-screen" class="panel tutorial-panel">
+        <h2>Welcome, Operator</h2>
+        <p class="desc">First time here? Here's everything you need to know.</p>
+
+        <div class="tutorial-grid">
+          <div class="tutorial-section">
+            <h3>🎮 Controls</h3>
+            <ul>
+              <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</li>
+              <li><kbd>Shift</kbd> Sprint</li>
+              <li><kbd>Space</kbd> Jump</li>
+              <li><kbd>Ctrl</kbd> Crouch</li>
+              <li><kbd>1</kbd>/<kbd>2</kbd> Switch Weapon</li>
+              <li><kbd>Esc</kbd> Pause</li>
+            </ul>
+          </div>
+
+          <div class="tutorial-section">
+            <h3>🎯 Game Modes</h3>
+            <ul>
+              <li><strong>Wave Mode</strong> — Survive timed waves of targets</li>
+              <li><strong>Continuous</strong> — Endless targets, constant action</li>
+            </ul>
+          </div>
+
+          <div class="tutorial-section">
+            <h3>🤖 Target Types</h3>
+            <ul>
+              <li><strong>Geometric</strong> — Simple shapes, one-hit kill</li>
+              <li><strong>Robot</strong> — Humanoid with hitboxes:
+                <span class="damage-hint">Head=160 | Body=40 | Legs=34</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="tutorial-section">
+            <h3>🔫 Weapons</h3>
+            <ul>
+              <li><strong>Pistol</strong> — 30 damage, fast fire rate</li>
+              <li><strong>Knife</strong> — 100 damage, close range, +25% speed</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="tutorial-footer">
+          <label class="dont-show-label">
+            <input type="checkbox" id="tutorial-dont-show">
+            Don't show this again
+          </label>
+          <button id="tutorial-dismiss-btn">Got it!</button>
+        </div>
+      </div>
+
       <div id="end-screen" class="panel">
         <h2>Session Complete</h2>
         <div class="summary">

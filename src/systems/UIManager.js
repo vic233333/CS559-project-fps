@@ -47,6 +47,11 @@ export default class UIManager {
     this.robotYOffsetInput = document.getElementById("robot-yoffset-input");
     this.robotYOffsetValue = document.getElementById("robot-yoffset-value");
 
+    // Tutorial elements
+    this.tutorial = document.getElementById("tutorial-screen");
+    this.tutorialDontShow = document.getElementById("tutorial-dont-show");
+    this.tutorialDismissBtn = document.getElementById("tutorial-dismiss-btn");
+
     // Game settings state
     this.gameSettings = {
       sensitivity: UI_DEFAULTS.sensitivity,
@@ -66,6 +71,7 @@ export default class UIManager {
 
     this._initDefaultWaves();
     this._bindSettingsEvents();
+    this._bindTutorialEvents();
   }
 
   on(event, cb) {
@@ -372,6 +378,39 @@ export default class UIManager {
     this.pause.classList.remove("visible");
     this.hud.classList.remove("visible");
     this.end.classList.remove("visible");
+    if (this.tutorial) this.tutorial.classList.remove("visible");
+  }
+
+  // --- Tutorial Methods ---
+  _bindTutorialEvents() {
+    if (this.tutorialDismissBtn) {
+      this.tutorialDismissBtn.addEventListener("click", () => this.hideTutorial());
+    }
+  }
+
+  shouldShowTutorial() {
+    try {
+      return localStorage.getItem("tutorialSeen") !== "true";
+    } catch {
+      return false; // localStorage not available
+    }
+  }
+
+  showTutorial() {
+    this.hideAll();
+    if (this.tutorial) this.tutorial.classList.add("visible");
+  }
+
+  hideTutorial() {
+    if (this.tutorialDontShow?.checked) {
+      try {
+        localStorage.setItem("tutorialSeen", "true");
+      } catch {
+        // localStorage not available
+      }
+    }
+    if (this.tutorial) this.tutorial.classList.remove("visible");
+    this.showMenu();
   }
 
   showMenu() {
