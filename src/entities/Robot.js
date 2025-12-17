@@ -107,16 +107,9 @@ export default class Robot extends Entity {
     // Create hitboxes for each body part
     this._createHitboxes();
 
-    // Physics body (simple cylinder for movement)
-    const physicsRadius = 0.3 * this.modelScale;
-    this.body = new CANNON.Body({
-      mass: 0,
-      shape: new CANNON.Cylinder(physicsRadius, physicsRadius, this.robotHeight, 8),
-      position: new CANNON.Vec3(this.position.x, this.position.y, this.position.z)
-    });
-    this.body.isDynamicCollider = true;
-    this.body.entity = this;
-    world.physicsWorld.addBody(this.body);
+    // Note: No physics body for robots - collision detection is done via raycasting on the mesh.
+    // Previously, a CANNON.Body was created here but it caused invisible collision issues with the player.
+    this.body = null;
   }
 
   async _createRobotModel() {
@@ -779,7 +772,7 @@ export default class Robot extends Entity {
       }
     }
 
-    if (!this.moving || !this.body) return;
+    if (!this.moving) return;
 
     this.time += dt * this.speed;
     this.moveTimer += dt;
@@ -791,21 +784,24 @@ export default class Robot extends Entity {
       this.moveDirection.set(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
     }
 
-    // Move robot
+    // Move robot directly via object3D (no physics body)
     const moveSpeed = 1.5 * this.speed;
-    this.body.position.x += this.moveDirection.x * moveSpeed * dt;
-    this.body.position.z += this.moveDirection.z * moveSpeed * dt;
+    this.object3D.position.x += this.moveDirection.x * moveSpeed * dt;
+    this.object3D.position.z += this.moveDirection.z * moveSpeed * dt;
 
     // Keep in bounds (simple boundary check)
     const bounds = 15;
-    if (Math.abs(this.body.position.x) > bounds) {
+    if (Math.abs(this.object3D.position.x) > bounds) {
       this.moveDirection.x *= -1;
-      this.body.position.x = Math.sign(this.body.position.x) * bounds;
+      this.object3D.position.x = Math.sign(this.object3D.position.x) * bounds;
     }
-    if (this.body.position.z < -bounds || this.body.position.z > 5) {
+    if (this.object3D.position.z < -bounds || this.object3D.position.z > 5) {
       this.moveDirection.z *= -1;
-      this.body.position.z = Math.max(-bounds, Math.min(5, this.body.position.z));
+      this.object3D.position.z = Math.max(-bounds, Math.min(5, this.object3D.position.z));
     }
+
+    // Sync hitbox positions with movement
+    this._syncHitboxPositions();
   }
 
   onHit(damage, hitPoint, bodyPart = 'body') {
