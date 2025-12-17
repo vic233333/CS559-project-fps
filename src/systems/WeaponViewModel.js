@@ -253,26 +253,16 @@ export default class WeaponViewModel {
           this.knifeCanDamage = false;
         }
       })
-      .addState("windup", {
-        onEnter: () => {
-          this.knifeSwingProgress = 0;
-          this.knifeCanDamage = false;
-        },
-        onUpdate: (dt) => {
-          this.knifeSwingProgress += dt / 0.15; // 150ms windup
-          if (this.knifeSwingProgress >= 1) {
-            this.knifeState.setState("swing");
-          }
-        }
-      })
       .addState("swing", {
         onEnter: () => {
           this.knifeSwingProgress = 0;
+          // Instant damage on swing start
+          this.knifeCanDamage = true;
         },
         onUpdate: (dt) => {
           this.knifeSwingProgress += dt / 0.2; // 200ms swing
-          // Damage window at 60-90% of swing
-          this.knifeCanDamage = this.knifeSwingProgress > 0.6 && this.knifeSwingProgress < 0.9;
+          // Damage window in first half of swing
+          this.knifeCanDamage = this.knifeSwingProgress < 0.5;
           if (this.knifeSwingProgress >= 1) {
             this.knifeState.setState("recovery");
           }
@@ -321,7 +311,8 @@ export default class WeaponViewModel {
     if (this.currentWeaponKey !== "knife") return false;
     if (this.knifeState.currentName !== "ready") return false;
 
-    this.knifeState.setState("windup");
+    // Go directly to swing (no windup)
+    this.knifeState.setState("swing");
     return true;
   }
 
@@ -460,25 +451,15 @@ export default class WeaponViewModel {
         knife.rotation.copy(baseRot);
         break;
 
-      case "windup":
-        // Pull back and rotate
-        knife.position.x = basePos.x + progress * 0.1;
-        knife.position.y = basePos.y + progress * 0.05;
-        knife.position.z = basePos.z + progress * 0.1;
-        knife.rotation.x = baseRot.x - progress * 0.5;
-        knife.rotation.y = baseRot.y + progress * 0.3;
-        knife.rotation.z = progress * 0.2;
-        break;
-
       case "swing":
-        // Fast swing forward
+        // Fast swing forward (no more windup case needed)
         const swingCurve = Math.sin(progress * Math.PI);
-        knife.position.x = basePos.x + 0.1 - progress * 0.15;
-        knife.position.y = basePos.y + 0.05 - progress * 0.1;
-        knife.position.z = basePos.z + 0.1 - progress * 0.25;
-        knife.rotation.x = baseRot.x - 0.5 + progress * 1.2;
-        knife.rotation.y = baseRot.y + 0.3 - progress * 0.8;
-        knife.rotation.z = 0.2 - progress * 0.4;
+        knife.position.x = basePos.x - progress * 0.15;
+        knife.position.y = basePos.y - progress * 0.1;
+        knife.position.z = basePos.z - progress * 0.25;
+        knife.rotation.x = baseRot.x + progress * 1.0;
+        knife.rotation.y = baseRot.y - progress * 0.8;
+        knife.rotation.z = -progress * 0.4;
         break;
 
       case "recovery":
