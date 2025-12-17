@@ -37,7 +37,18 @@ npm install
 npm run dev
 ```
 
-The game will open in your browser at `http://localhost:5173`
+The game will open in your browser at `http://localhost:5173/CS559-project-fps/`.
+
+To access it from other devices (LAN/Tailscale):
+
+- By IP: it should work out of the box
+- By hostname (e.g. `*.ts.net`): create a local-only `.env.local` (gitignored) and restart `npm run dev` with:
+
+```bash
+DEV_ALLOWED_HOSTS=<your-hostname>
+```
+
+Remote: `http://<your-hostname-or-ip>:5173/CS559-project-fps/`
 
 ### Building
 
