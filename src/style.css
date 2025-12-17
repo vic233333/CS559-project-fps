@@ -1074,3 +1074,274 @@ kbd {
 .tutorial-footer button {
   min-width: 120px;
 }
+
+/* --- Touch Controls Overlay --- */
+.touch-layer {
+  display: none;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.touch-layer.visible {
+  display: block;
+}
+
+/* Virtual Joystick */
+.touch-joystick {
+  position: absolute;
+  bottom: 100px;
+  left: 50px;
+  width: 140px;
+  height: 140px;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.joystick-base {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 200, 0, 0.3);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.3);
+}
+
+.joystick-thumb {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255, 200, 0, 0.5);
+  border: 2px solid var(--c-primary);
+  box-shadow: 0 0 15px rgba(255, 200, 0, 0.3);
+  transition: box-shadow 0.1s ease;
+}
+
+.joystick-thumb:active {
+  background: rgba(255, 200, 0, 0.7);
+  box-shadow: 0 0 25px rgba(255, 200, 0, 0.5);
+}
+
+/* Look Area */
+.touch-look {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 55%;
+  height: 100%;
+  pointer-events: auto;
+  touch-action: none;
+  /* Subtle visual feedback */
+  background: transparent;
+}
+
+/* Touch Action Buttons */
+.touch-buttons {
+  position: absolute;
+  bottom: 60px;
+  right: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.touch-btn {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: var(--c-text-main);
+  font-family: var(--f-display);
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  transition: all 0.1s ease;
+}
+
+.touch-btn:active {
+  background: rgba(255, 200, 0, 0.3);
+  border-color: var(--c-primary);
+  transform: scale(0.95);
+}
+
+.touch-btn::after {
+  display: none;
+}
+
+/* Fire button - larger and prominent */
+.touch-btn.fire {
+  width: 90px;
+  height: 90px;
+  background: rgba(255, 60, 60, 0.2);
+  border-color: rgba(255, 60, 60, 0.5);
+  color: #ff6666;
+  font-size: 14px;
+}
+
+.touch-btn.fire:active {
+  background: rgba(255, 60, 60, 0.5);
+  border-color: #ff6666;
+}
+
+/* Jump and Crouch */
+.touch-btn.jump,
+.touch-btn.crouch {
+  width: 55px;
+  height: 55px;
+  font-size: 20px;
+}
+
+/* Weapon switch buttons */
+.touch-btn.weapon {
+  width: 45px;
+  height: 45px;
+  font-size: 18px;
+  position: absolute;
+  right: 110px;
+}
+
+.touch-btn.weapon:first-of-type {
+  bottom: 20px;
+}
+
+#touch-weapon1-btn {
+  top: 80px;
+  right: auto;
+  left: -60px;
+}
+
+#touch-weapon2-btn {
+  top: 140px;
+  right: auto;
+  left: -60px;
+}
+
+/* Rearrange button positions */
+.touch-buttons {
+  position: absolute;
+  bottom: 80px;
+  right: 30px;
+}
+
+#touch-fire-btn {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+}
+
+#touch-jump-btn {
+  position: absolute;
+  bottom: 110px;
+  right: 10px;
+}
+
+#touch-crouch-btn {
+  position: absolute;
+  bottom: 60px;
+  right: 100px;
+}
+
+#touch-weapon1-btn,
+#touch-weapon2-btn {
+  position: absolute;
+  top: auto;
+  bottom: 160px;
+  left: auto;
+}
+
+#touch-weapon1-btn {
+  right: 60px;
+}
+
+#touch-weapon2-btn {
+  right: 0;
+}
+
+/* Touch toggle label styling */
+.touch-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--c-text-muted);
+  cursor: pointer;
+}
+
+.touch-toggle-label input[type="checkbox"] {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--c-panel-border);
+  border-radius: 3px;
+  cursor: pointer;
+  position: relative;
+}
+
+.touch-toggle-label input[type="checkbox"]:checked {
+  border-color: var(--c-primary);
+  background: var(--c-primary);
+}
+
+.touch-toggle-label input[type="checkbox"]:checked::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #000;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* Responsive touch controls */
+@media (max-width: 600px) {
+  .touch-joystick {
+    width: 120px;
+    height: 120px;
+    bottom: 60px;
+    left: 30px;
+  }
+
+  .joystick-thumb {
+    width: 50px;
+    height: 50px;
+  }
+
+  .touch-btn {
+    width: 60px;
+    height: 60px;
+  }
+
+  .touch-btn.fire {
+    width: 80px;
+    height: 80px;
+  }
+
+  .touch-btn.jump,
+  .touch-btn.crouch,
+  .touch-btn.weapon {
+    width: 45px;
+    height: 45px;
+  }
+}
+
+/* Move HUD to top-right when touch controls are enabled */
+body.touch-mode #ui-layer {
+  bottom: auto;
+  top: calc(var(--banner-height) + 20px);
+  right: 20px;
+}

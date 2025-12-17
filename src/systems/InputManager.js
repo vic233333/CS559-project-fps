@@ -9,6 +9,10 @@ export default class InputManager {
     this.keys = new Set();
     this.pointerLocked = false;
 
+    // Touch controls
+    this.touchInput = null;
+    this.touchEnabled = false;
+
     // Look
     this.lookDelta = new Vector2(); // accumulated look delta since last consume
     this._moveAxis = new Vector2(); // cached movement axis
@@ -21,6 +25,20 @@ export default class InputManager {
     this.switchQueue = null; // weapon slot number
 
     this._bindEvents();
+  }
+
+  /**
+   * Set touch input manager and enable/disable touch controls
+   */
+  setTouchInput(touchInput) {
+    this.touchInput = touchInput;
+  }
+
+  setTouchEnabled(enabled) {
+    this.touchEnabled = enabled;
+    if (this.touchInput) {
+      this.touchInput.setEnabled(enabled);
+    }
   }
 
   _bindEvents() {
@@ -56,9 +74,9 @@ export default class InputManager {
       this.keys.delete(e.code);
     });
 
-    // Click the canvas to request pointer lock
+    // Click the canvas to request pointer lock (skip when touch controls active)
     this.canvas.addEventListener("click", () => {
-      if (this.pointerLocked) return;
+      if (this.pointerLocked || this.touchEnabled) return;
 
       try {
         const maybePromise = this.canvas.requestPointerLock?.();
@@ -99,6 +117,11 @@ export default class InputManager {
   }
 
   getMoveAxis() {
+    // Use touch joystick if touch enabled
+    if (this.touchEnabled && this.touchInput) {
+      return this.touchInput.getMoveAxis();
+    }
+
     const x = (this.keys.has("KeyD") ? 1 : 0) - (this.keys.has("KeyA") ? 1 : 0);
     const y = (this.keys.has("KeyW") ? 1 : 0) - (this.keys.has("KeyS") ? 1 : 0);
 
@@ -110,6 +133,11 @@ export default class InputManager {
   }
 
   consumeLookDelta() {
+    // Use touch look if touch enabled
+    if (this.touchEnabled && this.touchInput) {
+      return this.touchInput.consumeLookDelta();
+    }
+
     const x = this.lookDelta.x;
     const y = this.lookDelta.y;
     this.lookDelta.set(0, 0);
@@ -117,6 +145,11 @@ export default class InputManager {
   }
 
   consumeJump() {
+    // Check touch jump
+    if (this.touchEnabled && this.touchInput && this.touchInput.consumeJump()) {
+      return true;
+    }
+
     const val = this.jumpQueued;
     this.jumpQueued = false;
     return val;
@@ -135,12 +168,22 @@ export default class InputManager {
   }
 
   consumeWeaponSwitch() {
+    // Check touch weapon switch first
+    if (this.touchEnabled && this.touchInput) {
+      const touchSwitch = this.touchInput.consumeWeaponSwitch();
+      if (touchSwitch !== null) return touchSwitch;
+    }
+
     const val = this.switchQueue;
     this.switchQueue = null;
     return val;
   }
 
   isFiring() {
+    // Touch fire doesn't require pointer lock
+    if (this.touchEnabled && this.touchInput && this.touchInput.isFiring()) {
+      return true;
+    }
     return this.fireHeld && this.pointerLocked;
   }
 
@@ -149,6 +192,10 @@ export default class InputManager {
   }
 
   isCrouching() {
+    // Check touch crouch
+    if (this.touchEnabled && this.touchInput && this.touchInput.isCrouching()) {
+      return true;
+    }
     return this.keys.has("ControlLeft") || this.keys.has("ControlRight");
   }
 }
