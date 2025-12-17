@@ -52,7 +52,7 @@ export default class Target extends Entity {
     const hitboxMat = new MeshBasicMaterial({
       color: 0xff0000,
       wireframe: true,
-      visible: true // Visible for debugging; set to false to hide
+      visible: false // Visible for debugging; set to false to hide
     });
 
     this.object3D.position.copy(this.position);

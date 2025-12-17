@@ -95,6 +95,52 @@
         </div>
 
         <div class="settings-section">
+          <h3>Target Type</h3>
+          <div class="setting-row radio-row">
+            <label>
+              <input type="radio" name="target-type" value="geometric" checked>
+              Geometric (Spheres/Cubes)
+            </label>
+            <label>
+              <input type="radio" name="target-type" value="robot">
+              Robot (Humanoid)
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-section robot-settings" style="display: none;">
+          <h3>Robot Settings</h3>
+          <div class="setting-row">
+            <label>
+              <input type="checkbox" id="robot-armor">
+              Enable Armor (50 armor, absorbs 50% body/leg damage)
+            </label>
+          </div>
+          <div class="setting-row">
+            <label>
+              <input type="checkbox" id="robot-moving" checked>
+              Robots Move
+            </label>
+          </div>
+          <div class="setting-row">
+            <label>Model Scale:</label>
+            <input type="range" id="robot-scale-slider" min="0.001" max="50" step="0.001" value="10">
+            <input type="number" id="robot-scale-input" min="0.001" max="50" step="0.001" value="10">
+            <span id="robot-scale-value">1.000</span>
+          </div>
+          <div class="setting-row">
+            <label>Model Y Offset:</label>
+            <input type="range" id="robot-yoffset-slider" min="-20" max="20" step="0.01" value="0">
+            <input type="number" id="robot-yoffset-input" min="-20" max="20" step="0.01" value="0">
+            <span id="robot-yoffset-value">0.00</span>
+          </div>
+          <div class="damage-info">
+            <p>Damage: Head=160 | Body=40 | Legs=34</p>
+            <p>Health: 100 HP</p>
+          </div>
+        </div>
+
+        <div class="settings-section">
           <h3>Game Mode</h3>
           <div class="setting-row radio-row">
             <label>
@@ -146,7 +192,62 @@
         <p class="desc">Press ESC to pause the game at any time.</p>
         <div class="options">
           <button id="resume-btn">Resume Game</button>
+          <button id="pause-settings-btn">Settings</button>
           <button id="quit-btn">Quit to Menu</button>
+        </div>
+      </div>
+
+      <!-- Tutorial Modal (First-time users) -->
+      <div id="tutorial-screen" class="panel tutorial-panel">
+        <h2>Welcome, Operator</h2>
+        <p class="desc">First time here? Here's everything you need to know.</p>
+
+        <div class="tutorial-grid">
+          <div class="tutorial-section">
+            <h3>🎮 Controls</h3>
+            <ul>
+              <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</li>
+              <li><kbd>Shift</kbd> Sprint</li>
+              <li><kbd>Space</kbd> Jump</li>
+              <li><kbd>Ctrl</kbd> Crouch</li>
+              <li><kbd>1</kbd>/<kbd>2</kbd> Switch Weapon</li>
+              <li><kbd>Esc</kbd> Pause</li>
+            </ul>
+          </div>
+
+          <div class="tutorial-section">
+            <h3>🎯 Game Modes</h3>
+            <ul>
+              <li><strong>Wave Mode</strong> — Survive timed waves of targets</li>
+              <li><strong>Continuous</strong> — Endless targets, constant action</li>
+            </ul>
+          </div>
+
+          <div class="tutorial-section">
+            <h3>🤖 Target Types</h3>
+            <ul>
+              <li><strong>Geometric</strong> — Simple shapes, one-hit kill</li>
+              <li><strong>Robot</strong> — Humanoid with hitboxes:
+                <span class="damage-hint">Head=160 | Body=40 | Legs=34</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="tutorial-section">
+            <h3>🔫 Weapons</h3>
+            <ul>
+              <li><strong>Pistol</strong> — 30 damage, fast fire rate</li>
+              <li><strong>Knife</strong> — 100 damage, close range, +25% speed</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="tutorial-footer">
+          <label class="dont-show-label">
+            <input type="checkbox" id="tutorial-dont-show">
+            Don't show this again
+          </label>
+          <button id="tutorial-dismiss-btn">Got it!</button>
         </div>
       </div>
 

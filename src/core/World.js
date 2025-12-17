@@ -2,6 +2,7 @@ import {
   Scene,
   Color,
   Vector3,
+  Box3,
   Group,
   WebGLRenderer,
   SRGBColorSpace
@@ -9,6 +10,7 @@ import {
 import * as CANNON from "cannon-es";
 import Player from "../entities/Player.js";
 import Target from "../entities/Target.js";
+import Robot from "../entities/Robot.js";
 import SceneBuilder from "../systems/SceneBuilder.js";
 import Debris from "../entities/Debris.js";
 
@@ -19,6 +21,8 @@ export default class World {
     this.assetManager = assetManager;
     this.gameplayConfig = gameplayConfig;
     this.renderProfile = null;
+    this.robotModelScale = 1;
+    this.robotModelYOffset = 0;
 
     this.scene = new Scene();
     this.renderer = new WebGLRenderer({
@@ -68,6 +72,19 @@ export default class World {
     window.addEventListener("resize", () => this.handleResize());
   }
 
+  setRobotModelTuning(scale, yOffset, { applyToExisting = true } = {}) {
+    if (Number.isFinite(scale)) this.robotModelScale = scale;
+    if (Number.isFinite(yOffset)) this.robotModelYOffset = yOffset;
+
+    if (!applyToExisting) return;
+    for (const entity of this.targets) {
+      if (!entity || !entity.alive) continue;
+      if (entity instanceof Robot && typeof entity.setModelTuning === "function") {
+        entity.setModelTuning(this.robotModelScale, this.robotModelYOffset);
+      }
+    }
+  }
+
   setInputManager(input) {
     this.player.input = input;
   }
@@ -97,7 +114,7 @@ export default class World {
     // Reset player position
     const spawn = sceneConfig?.playerSpawn
       ? new Vector3(...sceneConfig.playerSpawn)
-      : new Vector3(0, this.player.height, 8);
+      : new Vector3(0, this.player.eyeHeightStanding, 8);
     this.player.reset(spawn);
 
     // Configure render clear color to match sky
@@ -118,37 +135,134 @@ export default class World {
     }
   }
 
-  async spawnTarget({ moving = false, speed = 1, position, radius }) {
+  async spawnTarget({ moving = false, speed = 1, position, radius, targetType = "geometric", hasArmor = false, maxHeightY = null }) {
     const modeConfig = this.modeManager.currentConfig();
-    const target = new Target({
-      modeConfig,
-      renderProfile: this.renderProfile,
-      moving,
-      speed,
-      radius,
-      position
-    });
-    await target.build(this.scene, this);
-    this.targets.push(target);
-    this.entities.push(target);
-    this.targetGroup.add(target.object3D);
-    this.hittableGroup.add(target.hitbox);
-    return target;
+
+    // Apply Y-axis height variation for geometric targets
+    let finalPosition = position.clone();
+    if (targetType === "robot") {
+      // Robots are grounded (their model origin is at feet). Keep their head around player camera height.
+      finalPosition.y = 0;
+    }
+    if (targetType === "geometric" && maxHeightY !== null) {
+      // Add random height within the limit
+      // Max height based on ~30 degree look angle from player eye (1.6m)
+      // At distance 5m: tan(30°) * 5 ≈ 2.9m above eye level = 4.5m total
+      const minY = 0.5; // Minimum spawn height
+      const maxY = Math.min(maxHeightY, 4.5);
+      finalPosition.y = minY + Math.random() * (maxY - minY);
+    } else if (targetType === "robot") {
+      // Robots should have their feet on the ground (Y=0)
+      finalPosition.y = 0;
+    }
+
+    // Check for spawn overlap and adjust position if needed
+    finalPosition = this._findNonOverlappingPosition(finalPosition, radius || 0.6, targetType);
+
+    let entity;
+    if (targetType === "robot") {
+      entity = new Robot({
+        modeConfig,
+        renderProfile: this.renderProfile,
+        moving,
+        speed,
+        position: finalPosition,
+        hasArmor,
+        modelScale: this.robotModelScale,
+        modelYOffset: this.robotModelYOffset
+      });
+      await entity.build(this.scene, this);
+
+      // Add all robot hitboxes to hittable group
+      for (const hitbox of entity.getHitboxes()) {
+        this.hittableGroup.add(hitbox);
+      }
+    } else {
+      entity = new Target({
+        modeConfig,
+        renderProfile: this.renderProfile,
+        moving,
+        speed,
+        radius,
+        position: finalPosition
+      });
+      await entity.build(this.scene, this);
+      this.hittableGroup.add(entity.hitbox);
+    }
+
+    this.targets.push(entity);
+    this.entities.push(entity);
+    this.targetGroup.add(entity.object3D);
+    return entity;
+  }
+
+  // Find a position that doesn't overlap with existing targets
+  _findNonOverlappingPosition(position, radius, targetType) {
+    const checkRadius = targetType === "robot" ? 1.0 : radius * 1.5;
+    const maxAttempts = 10;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      let hasOverlap = false;
+
+      for (const target of this.targets) {
+        if (!target.alive) continue;
+
+        const targetPos = target.object3D.position;
+        const targetRadius = target.radius || 1.0;
+        const minDistance = checkRadius + targetRadius + 0.5; // Add buffer
+
+        const distance = position.distanceTo(targetPos);
+        if (distance < minDistance) {
+          hasOverlap = true;
+          break;
+        }
+      }
+
+      if (!hasOverlap) {
+        return position;
+      }
+
+      // Try a new position nearby
+      const offset = new Vector3(
+        (Math.random() - 0.5) * 3,
+        0, // Keep same height
+        (Math.random() - 0.5) * 3
+      );
+      position = position.clone().add(offset);
+
+      // Keep in bounds
+      position.x = Math.max(-15, Math.min(15, position.x));
+      position.z = Math.max(-20, Math.min(5, position.z));
+    }
+
+    return position; // Return last attempt even if still overlapping
   }
 
   remove(entity) {
     if (entity.object3D) {
       this.targetGroup.remove(entity.object3D);
+      this.scene.remove(entity.object3D);
     }
+
+    // Handle both regular targets and robots
     if (entity.hitbox) {
       this.hittableGroup.remove(entity.hitbox);
     }
-    
+
+    // For robots, remove all hitboxes
+    if (entity.hitboxes) {
+      for (const key in entity.hitboxes) {
+        if (entity.hitboxes[key]) {
+          this.hittableGroup.remove(entity.hitboxes[key]);
+        }
+      }
+    }
+
     const targetIndex = this.targets.indexOf(entity);
     if (targetIndex > -1) {
       this.targets.splice(targetIndex, 1);
     }
-    
+
     const entityIndex = this.entities.indexOf(entity);
     if (entityIndex > -1) {
       this.entities.splice(entityIndex, 1);
@@ -159,7 +273,9 @@ export default class World {
     // Apply input -> physics velocities
     this.player.update(dt, this);
     for (const entity of this.entities) {
-      if (entity.alive && entity.prePhysics) entity.prePhysics(dt, this);
+      if ((entity.alive || entity.updateWhileDead) && entity.prePhysics) {
+        entity.prePhysics(dt, this);
+      }
     }
 
     // Step physics
@@ -173,7 +289,9 @@ export default class World {
     ];
     this.player.syncFromPhysics();
     for (const entity of this.entities) {
-      if (entity.alive && entity.postPhysics) entity.postPhysics(dt, this);
+      if ((entity.alive || entity.updateWhileDead) && entity.postPhysics) {
+        entity.postPhysics(dt, this);
+      }
     }
 
     // Update and clean up debris
@@ -183,6 +301,13 @@ export default class World {
       if (d.isDead()) {
         d.destroy();
         this.debris.splice(i, 1);
+      }
+    }
+
+    // Remove entities that finished delayed cleanup (e.g. death animations)
+    for (const entity of [...this.entities]) {
+      if (entity.pendingRemoval) {
+        this.remove(entity);
       }
     }
 

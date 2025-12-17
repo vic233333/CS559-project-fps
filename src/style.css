@@ -880,3 +880,197 @@ body::after {
   font-size: 16px;
   border-right-color: var(--c-text-muted);
 }
+
+/* --- Robot Settings --- */
+.robot-settings {
+  background: rgba(68, 136, 255, 0.05);
+  border-left: 2px solid #4488ff;
+  padding-left: 14px;
+}
+
+.robot-settings .setting-row label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.setting-row input[type="checkbox"] {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--c-panel-border);
+  border-radius: 3px;
+  cursor: pointer;
+  position: relative;
+}
+
+.setting-row input[type="checkbox"]:checked {
+  border-color: var(--c-primary);
+  background: var(--c-primary);
+}
+
+.setting-row input[type="checkbox"]:checked::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #000;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.damage-info {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--c-text-muted);
+  font-family: var(--f-display);
+}
+
+.damage-info p {
+  margin: 4px 0;
+}
+
+/* --- Tutorial Modal --- */
+.tutorial-panel {
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow-y: auto;
+  clip-path: polygon(0 0, calc(100% - 30px) 0, 100% 30px, 100% 100%, 30px 100%, 0 calc(100% - 30px));
+}
+
+.tutorial-panel::before {
+  content: "SYS.ONBOARD // 00";
+}
+
+.tutorial-panel.visible {
+  animation: tutorial-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes tutorial-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -45%) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.tutorial-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 600px) {
+  .tutorial-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tutorial-section {
+  background: rgba(255, 255, 255, 0.02);
+  padding: 16px;
+  border-left: 2px solid var(--c-primary);
+}
+
+.tutorial-section h3 {
+  font-size: 14px;
+  color: var(--c-primary);
+  margin-bottom: 12px;
+  letter-spacing: 0.05em;
+}
+
+.tutorial-section ul {
+  list-style: none;
+  font-size: 13px;
+  color: var(--c-text-muted);
+  line-height: 1.8;
+}
+
+.tutorial-section ul li {
+  margin-bottom: 4px;
+}
+
+.tutorial-section ul li strong {
+  color: var(--c-text-main);
+}
+
+kbd {
+  display: inline-block;
+  background: rgba(255, 200, 0, 0.15);
+  border: 1px solid var(--c-primary);
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-family: var(--f-display);
+  font-size: 11px;
+  color: var(--c-primary);
+  margin-right: 2px;
+}
+
+.damage-hint {
+  display: block;
+  font-size: 11px;
+  color: var(--c-text-muted);
+  margin-top: 4px;
+  padding-left: 8px;
+  border-left: 1px solid var(--c-panel-border);
+}
+
+.tutorial-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 16px;
+  border-top: 1px solid var(--c-panel-border);
+}
+
+.dont-show-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--c-text-muted);
+  cursor: pointer;
+}
+
+.dont-show-label input[type="checkbox"] {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--c-panel-border);
+  border-radius: 3px;
+  cursor: pointer;
+  position: relative;
+}
+
+.dont-show-label input[type="checkbox"]:checked {
+  border-color: var(--c-primary);
+  background: var(--c-primary);
+}
+
+.dont-show-label input[type="checkbox"]:checked::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #000;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.tutorial-footer button {
+  min-width: 120px;
+}
