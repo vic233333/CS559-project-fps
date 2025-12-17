@@ -87,6 +87,16 @@
         </div>
 
         <div class="settings-section">
+          <h3>Touch Controls</h3>
+          <div class="setting-row">
+            <label class="touch-toggle-label">
+              <input type="checkbox" id="touch-controls-toggle">
+              Enable Touch Controls (for tablets/touchscreen devices)
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-section">
           <h3>Target Distribution Angle</h3>
           <div class="setting-row">
             <input type="range" id="distribute-angle-slider" min="30" max="360" step="10" value="180">
@@ -240,6 +250,18 @@
               <li><strong>Knife</strong> — 100 damage, close range, +25% speed</li>
             </ul>
           </div>
+
+          <div class="tutorial-section tutorial-touch">
+            <h3>📱 Touch Controls</h3>
+            <ul>
+              <li>Enable in Settings for tablet/touch devices</li>
+              <li><strong>Left Joystick</strong> — Move character</li>
+              <li><strong>Right Area</strong> — Look around (drag)</li>
+              <li><strong>FIRE button</strong> — Shoot (hold for auto-fire)</li>
+              <li><strong>↑ / ↓ buttons</strong> — Jump / Crouch</li>
+              <li><strong>1 / 2 buttons</strong> — Switch weapons</li>
+            </ul>
+          </div>
         </div>
 
         <div class="tutorial-footer">
@@ -296,7 +318,21 @@
 
     <div id="countdown-layer"></div>
 
-
+    <!-- Touch Controls Overlay -->
+    <div id="touch-controls-layer" class="touch-layer">
+      <div id="touch-joystick" class="touch-joystick">
+        <div class="joystick-base"></div>
+        <div class="joystick-thumb"></div>
+      </div>
+      <div id="touch-look-area" class="touch-look"></div>
+      <div class="touch-buttons">
+        <button id="touch-fire-btn" class="touch-btn fire">FIRE</button>
+        <button id="touch-jump-btn" class="touch-btn jump">↑</button>
+        <button id="touch-crouch-btn" class="touch-btn crouch">↓</button>
+        <button id="touch-weapon1-btn" class="touch-btn weapon">1</button>
+        <button id="touch-weapon2-btn" class="touch-btn weapon">2</button>
+      </div>
+    </div>
 
   </main>
 

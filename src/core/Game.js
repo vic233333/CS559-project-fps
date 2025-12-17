@@ -3,6 +3,7 @@ import GameState from "./GameState.js";
 import World from "./World.js";
 import AssetManager from "../systems/AssetManager.js";
 import InputManager from "../systems/InputManager.js";
+import TouchInputManager from "../systems/TouchInputManager.js";
 import UIManager from "../systems/UIManager.js";
 import ModeManager from "../systems/ModeManager.js";
 import WaveManager from "../systems/WaveManager.js";
@@ -45,6 +46,12 @@ export default class Game {
     this.state = new GameState();
     this.ui = new UIManager();
     this.input = new InputManager(canvas);
+
+    // Touch input manager
+    this.touchInput = new TouchInputManager();
+    this.input.setTouchInput(this.touchInput);
+    this.touchEnabled = false;
+
     this.world = new World({
       canvas,
       modeManager: this.modeManager,
@@ -111,6 +118,9 @@ export default class Game {
   }
 
   async init() {
+    // Initialize touch input manager
+    this.touchInput.init();
+
     await this.applyMode(this.modeManager.currentMode());
 
     // Show tutorial for first-time users
@@ -175,11 +185,31 @@ export default class Game {
       console.log("New robot model scale:", scale);
       console.log("New robot model Y offset:", yOffset);
     });
+
+    // Touch controls toggle
+    this.ui.on("touchControlsToggle", (enabled) => {
+      this.setTouchEnabled(enabled);
+    });
+  }
+
+  setTouchEnabled(enabled) {
+    this.touchEnabled = enabled;
+    this.input.setTouchEnabled(enabled);
+
+    // Toggle body class for CSS-based HUD repositioning
+    document.body.classList.toggle("touch-mode", enabled);
+
+    // Show/hide touch overlay
+    const touchLayer = document.getElementById("touch-controls-layer");
+    if (touchLayer) {
+      touchLayer.classList.toggle("visible", enabled && this.state.is("playing"));
+    }
   }
 
   _bindPauseEvents() {
-    // Listen for pointer lock change to detect ESC press
+    // Listen for pointer lock change to detect ESC press (only when not in touch mode)
     document.addEventListener("pointerlockchange", () => {
+      if (this.touchEnabled) return; // Don't pause on pointer lock changes in touch mode
       const isLocked = document.pointerLockElement === this.canvas;
       if (!isLocked && this.state.is("playing")) {
         this.pauseGame();
@@ -312,7 +342,14 @@ export default class Game {
 
     this.state.setState("playing");
     this.ui.showHUD();
-    await this.canvas.requestPointerLock?.();
+
+    // Show touch overlay if touch enabled, otherwise request pointer lock
+    if (this.touchEnabled) {
+      const touchLayer = document.getElementById("touch-controls-layer");
+      if (touchLayer) touchLayer.classList.add("visible");
+    } else {
+      await this.canvas.requestPointerLock?.();
+    }
     this.clock.start();
   }
 
@@ -348,6 +385,12 @@ export default class Game {
     this.state.setState("paused");
     this.ui.showPause();
     this.clock.stop();
+
+    // Hide touch overlay on pause
+    if (this.touchEnabled) {
+      const touchLayer = document.getElementById("touch-controls-layer");
+      if (touchLayer) touchLayer.classList.remove("visible");
+    }
   }
 
   async resumeGame() {
@@ -358,7 +401,14 @@ export default class Game {
 
     this.state.setState("playing");
     this.ui.showHUD();
-    await this.canvas.requestPointerLock?.();
+
+    // Show touch overlay if touch enabled, otherwise request pointer lock
+    if (this.touchEnabled) {
+      const touchLayer = document.getElementById("touch-controls-layer");
+      if (touchLayer) touchLayer.classList.add("visible");
+    } else {
+      await this.canvas.requestPointerLock?.();
+    }
     this.clock.start();
     this.pausedState = null;
   }
@@ -368,11 +418,19 @@ export default class Game {
     this.state.setState("menu");
     this.ui.showMenu();
     document.exitPointerLock?.();
+
+    // Hide touch overlay
+    const touchLayer = document.getElementById("touch-controls-layer");
+    if (touchLayer) touchLayer.classList.remove("visible");
   }
 
   toMenu() {
     this.state.setState("menu");
     this.ui.showMenu();
+
+    // Hide touch overlay
+    const touchLayer = document.getElementById("touch-controls-layer");
+    if (touchLayer) touchLayer.classList.remove("visible");
   }
 
   onStateChange(next) {

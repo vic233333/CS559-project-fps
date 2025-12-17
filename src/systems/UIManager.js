@@ -52,6 +52,9 @@ export default class UIManager {
     this.tutorialDontShow = document.getElementById("tutorial-dont-show");
     this.tutorialDismissBtn = document.getElementById("tutorial-dismiss-btn");
 
+    // Touch controls elements
+    this.touchControlsToggle = document.getElementById("touch-controls-toggle");
+
     // Game settings state
     this.gameSettings = {
       sensitivity: UI_DEFAULTS.sensitivity,
@@ -66,7 +69,8 @@ export default class UIManager {
       robotArmor: false,
       robotMoving: true,
       robotModelScale: UI_DEFAULTS.robotModelScale,
-      robotModelYOffset: UI_DEFAULTS.robotModelYOffset
+      robotModelYOffset: UI_DEFAULTS.robotModelYOffset,
+      touchControlsEnabled: false
     };
 
     this._initDefaultWaves();
@@ -195,6 +199,14 @@ export default class UIManager {
     if (this.robotYOffsetInput) {
       this.robotYOffsetInput.addEventListener("input", (e) => {
         this._setRobotModelYOffset(parseFloat(e.target.value));
+      });
+    }
+
+    // Touch controls toggle
+    if (this.touchControlsToggle) {
+      this.touchControlsToggle.addEventListener("change", (e) => {
+        this.gameSettings.touchControlsEnabled = e.target.checked;
+        this.emit("touchControlsToggle", e.target.checked);
       });
     }
   }
@@ -456,6 +468,10 @@ export default class UIManager {
     this._setRobotModelScale(this.gameSettings.robotModelScale, { emit: false });
     this._setRobotModelYOffset(this.gameSettings.robotModelYOffset, { emit: false });
     this._toggleTargetTypeSettings();
+    // Sync touch controls toggle
+    if (this.touchControlsToggle) {
+      this.touchControlsToggle.checked = this.gameSettings.touchControlsEnabled;
+    }
   }
 
   showPause() {
