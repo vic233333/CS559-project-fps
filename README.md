@@ -1,6 +1,6 @@
 # CS559 FPS Range
 
-A first-person shooter training game built with Three.js and Cannon.js.
+A first-person shooter training range built with Three.js, Cannon-es, and Vite. It focuses on short, replayable sessions with configurable waves, target types, and a polished HUD/menus.
 
 ## GroupID
 
@@ -12,11 +12,50 @@ The game is deployed and playable at: https://vic233333.github.io/CS559-project-
 
 ## Features
 
-- First-person shooter mechanics
-- Physics simulation with Cannon.js
-- 3D graphics with Three.js
-- Wave-based gameplay
-- Auto-play demo mode
+- Wave and continuous session modes with configurable duration and target counts
+- Two target styles: geometric shapes or humanoid robots with hitboxes and armor options
+- Weapon switching (pistol + knife) with recoil, spread, and accuracy penalties while moving
+- Detailed HUD, end-of-session stats, and performance chart
+- Touch controls (virtual joystick + buttons) for tablets/touchscreen devices
+- Auto-play demo mode for hands-off showcasing
+
+## Gameplay
+
+- **Wave Mode**: Timed waves with increasing target counts and speed.
+- **Continuous Mode**: Constant targets for the full session duration.
+- **Robots**: Head/body/leg hitboxes with adjustable model scale/offset and optional armor.
+
+## Controls
+
+### Keyboard + Mouse
+
+- **Move**: WASD
+- **Look**: Mouse (click canvas to lock pointer)
+- **Shoot**: Left Click
+- **Sprint**: Shift
+- **Jump**: Space
+- **Crouch**: Ctrl
+- **Switch Weapon**: 1 / 2
+- **Pause**: Esc
+
+### Touch (enable in Settings)
+
+- **Move**: Left joystick
+- **Look**: Drag right side of screen
+- **Shoot**: FIRE button (hold to auto-fire)
+- **Jump / Crouch**: ↑ / ↓ buttons
+- **Switch Weapon**: 1 / 2 buttons
+
+## Game Settings (in-menu)
+
+- Mouse sensitivity
+- Target distribution angle
+- Game mode: Wave or Continuous
+- Wave configuration (count, targets per wave, moving ratio)
+- Continuous mode target count + duration
+- Target type (geometric or robot) + robot armor/movement
+- Robot model scale and Y-offset
+- Touch controls toggle
 
 ## Development
 
@@ -58,13 +97,11 @@ npm run build
 
 The built files will be in the `dist` directory.
 
-## Controls
+### Previewing the Build
 
-- **Move**: WASD
-- **Sprint**: Shift
-- **Jump**: Space
-- **Pause**: Esc
-- **Toggle Mode**: Use buttons in the header
+```bash
+npm run preview
+```
 
 ## Deployment
 
@@ -77,4 +114,4 @@ You can also manually trigger the deployment from the Actions tab in GitHub.
 
 ## License
 
-ISC
+MIT License. See [LICENSE](LICENSE) for details.
